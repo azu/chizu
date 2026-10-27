@@ -99,14 +99,14 @@ struct ChizuMain {
             Usage:
               chizu --help
               chizu help
-              chizu validate [--config FILE]
+              chizu check [--config FILE]
               chizu decide URL [--source BUNDLE_ID] [--config FILE]
               chizu open URL [--source BUNDLE_ID] [--config FILE]
               chizu default-status
               chizu make-default
 
             Commands:
-              validate       Check the configuration without opening a link.
+              check          Check the configuration without opening a link.
               decide         Print the matching rule and destination; do not open a browser.
               open           Open the URL in the selected browser and profile.
               default-status Show the current HTTP and HTTPS handler bundle IDs.
@@ -140,7 +140,7 @@ struct ChizuMain {
               JSONC permits // and /* */ comments and trailing commas.
 
             Examples:
-              chizu validate
+              chizu check
               chizu decide 'https://docs.example.com/guide'
               chizu decide 'https://example.com/' --source com.apple.mail
               chizu decide 'https://example.com/' --config ./config.jsonc
@@ -174,7 +174,7 @@ struct ChizuMain {
             print("Chizu is the default handler for http and https")
             return
         }
-        guard let command = arguments.first, ["validate", "decide", "open"].contains(command) else {
+        guard let command = arguments.first, ["check", "decide", "open"].contains(command) else {
             throw ChizuError.invalidConfiguration("unknown command; use --help")
         }
         var urlString: String?
@@ -198,9 +198,9 @@ struct ChizuMain {
             }
         }
 
-        if command == "validate" {
+        if command == "check" {
             guard urlString == nil, sourceBundleID == nil else {
-                throw ChizuError.invalidConfiguration("validate accepts only --config")
+                throw ChizuError.invalidConfiguration("check accepts only --config")
             }
             _ = try Configuration.load(from: configurationURL ?? RouteService.defaultConfigurationURL)
             print("Configuration is valid")

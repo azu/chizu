@@ -23,13 +23,13 @@ Create `~/.config/chizu/config.jsonc` from [the example](examples/config.jsonc),
 Check the file and preview the default, a URL rule, and a source-app rule before switching the default browser:
 
 ```sh
-~/Applications/Chizu.app/Contents/MacOS/chizu validate
+~/Applications/Chizu.app/Contents/MacOS/chizu check
 ~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://example.com/'
 ~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://team.example.com/projects/123'
 ~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://calendar.example.com/' --source com.apple.mail
 ```
 
-`validate` checks the JSONC file and rule expressions. `decide` reads the file and prints which rule, app, and profile would be used; it does not open a browser or change the macOS default. With the example configuration below, the three URLs print `rule=default app=com.apple.Safari profile=-`, `rule=Team links app=company.thebrowser.dia profile=Team`, and `rule=Calendar links from Mail app=com.google.Chrome profile=-`, respectively. The dash means no profile was set. `--source` supplies a simulated sending app for testing `sourceBundleID` rules; omit it to see the result when no sending app is known. Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for all command forms and examples.
+`check` checks the JSONC file and rule expressions. `decide` reads the file and prints which rule, app, and profile would be used; it does not open a browser or change the macOS default. With the example configuration below, the three URLs print `rule=default app=com.apple.Safari profile=-`, `rule=Team links app=company.thebrowser.dia profile=Team`, and `rule=Calendar links from Mail app=com.google.Chrome profile=-`, respectively. The dash means no profile was set. `--source` supplies a simulated sending app for testing `sourceBundleID` rules; omit it to see the result when no sending app is known. Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for all command forms and examples.
 
 Set Chizu as the default handler for HTTP and HTTPS, then inspect the result:
 
