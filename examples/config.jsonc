@@ -1,20 +1,24 @@
 {
   "version": 1,
-  // Choose a browser or a Dia profile for links with no matching rule.
+  // Fallback for links that match no rule; separate from the macOS default browser.
   "default": { "bundleID": "com.apple.Safari" },
+  // Rules run from top to bottom. The first match wins.
   "rules": [
     {
       "name": "Docs in Chrome",
       "when": { "host": "docs.example.com" },
+      // Use the profile name shown in Chrome.
       "destination": { "bundleID": "com.google.Chrome", "profile": "Work" }
     },
     {
       "name": "Team links",
+      // Both the exact host and path prefix must match.
       "when": { "host": "team.example.com", "pathPrefix": "/projects" },
       "destination": { "bundleID": "company.thebrowser.dia", "profile": "Team" }
     },
     {
       "name": "Calendar links from Mail",
+      // This rule needs macOS to identify Mail as the sending app.
       "when": { "urlContains": "calendar", "sourceBundleID": "com.apple.mail" },
       "destination": { "bundleID": "com.google.Chrome" }
     },

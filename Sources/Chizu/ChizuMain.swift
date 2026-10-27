@@ -99,18 +99,18 @@ struct ChizuMain {
             Usage:
               chizu --help
               chizu help
-              chizu check [--config FILE]
-              chizu decide URL [--source BUNDLE_ID] [--config FILE]
+              chizu check URL [--source BUNDLE_ID] [--config FILE]
               chizu open URL [--source BUNDLE_ID] [--config FILE]
-              chizu default-status
-              chizu make-default
+              chizu config check [--config FILE]
+              chizu default status
+              chizu default set
 
             Commands:
-              check          Check the configuration without opening a link.
-              decide         Print the matching rule and destination; do not open a browser.
-              open           Open the URL in the selected browser and profile.
-              default-status Show the current HTTP and HTTPS handler bundle IDs.
-              make-default   Set Chizu as the HTTP and HTTPS handler.
+              check URL      Print the matching rule and destination without opening a browser.
+              open URL       Open the URL in the selected browser and profile.
+              config check   Check the JSONC configuration without opening a link.
+              default status Show the current macOS HTTP and HTTPS handlers.
+              default set    Set Chizu as the macOS HTTP and HTTPS handler.
 
             Options:
               --config FILE      Read another JSONC file instead of
@@ -121,7 +121,9 @@ struct ChizuMain {
             Configuration example (~/.config/chizu/config.jsonc):
               {
                 "version": 1,
+                // Fallback for links that match no rule.
                 "default": { "bundleID": "com.apple.Safari" },
+                // Rules run from top to bottom; the first match wins.
                 "rules": [
                   {
                     "name": "Docs in Chrome",
@@ -140,26 +142,36 @@ struct ChizuMain {
               JSONC permits // and /* */ comments and trailing commas.
 
             Examples:
-              chizu check
-              chizu decide 'https://docs.example.com/guide'
-              chizu decide 'https://example.com/' --source com.apple.mail
-              chizu decide 'https://example.com/' --config ./config.jsonc
+              chizu config check
+              chizu check 'https://docs.example.com/guide'
+              chizu check 'https://example.com/' --source com.apple.mail
+              chizu check 'https://example.com/' --config ./config.jsonc
               chizu open 'https://docs.example.com/guide'
+              chizu default status
+              chizu default set
 
-            decide output with the example above:
+            check URL output with the example above:
               rule=Docs in Chrome app=com.google.Chrome profile=Work
               rule=default app=com.apple.Safari profile=-
             The dash means no profile was specified.
+            The JSONC default is a fallback destination; default status/set manage
+            the macOS default browser.
+
+            v1.0.0 compatibility aliases:
+              decide URL    = check URL
+              check         = config check (when no URL is supplied)
+              default-status = default status
+              make-default   = default set
             """)
             return
         }
-        if arguments == ["default-status"] {
+        if arguments == ["default", "status"] || arguments == ["default-status"] {
             for scheme in ["http", "https"] {
                 print("\(scheme): \(defaultHandler(for: scheme) ?? "none")")
             }
             return
         }
-        if arguments == ["make-default"] {
+        if arguments == ["default", "set"] || arguments == ["make-default"] {
             guard NSWorkspace.shared.urlForApplication(withBundleIdentifier: "dev.azu.chizu") != nil else {
                 throw ChizuError.invalidConfiguration("install Chizu.app before setting it as the default browser")
             }
@@ -174,13 +186,15 @@ struct ChizuMain {
             print("Chizu is the default handler for http and https")
             return
         }
-        guard let command = arguments.first, ["check", "decide", "open"].contains(command) else {
+        let isConfigurationCheck = arguments.starts(with: ["config", "check"])
+        guard let command = arguments.first,
+              ["check", "decide", "open"].contains(command) || isConfigurationCheck else {
             throw ChizuError.invalidConfiguration("unknown command; use --help")
         }
         var urlString: String?
         var sourceBundleID: String?
         var configurationURL: URL?
-        var index = 1
+        var index = isConfigurationCheck ? 2 : 1
         while index < arguments.count {
             switch arguments[index] {
             case "--config":
@@ -198,9 +212,9 @@ struct ChizuMain {
             }
         }
 
-        if command == "check" {
+        if isConfigurationCheck || (command == "check" && urlString == nil && sourceBundleID == nil) {
             guard urlString == nil, sourceBundleID == nil else {
-                throw ChizuError.invalidConfiguration("check accepts only --config")
+                throw ChizuError.invalidConfiguration("config check accepts only --config")
             }
             _ = try Configuration.load(from: configurationURL ?? RouteService.defaultConfigurationURL)
             print("Configuration is valid")
@@ -211,7 +225,7 @@ struct ChizuMain {
             throw ChizuError.invalidConfiguration("a URL is required")
         }
         let decision = try RouteService.decide(url, sourceBundleID: sourceBundleID, configurationURL: configurationURL)
-        if command == "decide" {
+        if command == "check" || command == "decide" {
             print("rule=\(decision.ruleName ?? "default") app=\(decision.destination.bundleID) profile=\(decision.destination.profile ?? "-")")
         } else {
             try RouteService.open(url, decision: decision)

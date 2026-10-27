@@ -8,7 +8,7 @@ This feature chooses where to open a web link received by [Chizu](../../product.
 
 ### Scope
 
-It covers HTTP and HTTPS links; conditions on full URL text, regular expressions, host, path, and an identified source app; browser and Dia or Chrome profile destinations; file based configuration; and previewing the routing result.
+It covers HTTP and HTTPS links; conditions on full URL text, regular expressions, host, path, and an identified source app; browser and Dia or Chrome profile destinations; file based configuration; previewing the routing result; and inspecting or setting the macOS default browser.
 
 ### Out of scope
 
@@ -79,8 +79,14 @@ Scenario: Find the configuration syntax and command examples
 Scenario: Preview a routing decision without opening the link
 
 - Given: A valid configuration file and an HTTP or HTTPS URL.
-- When: The user runs `chizu decide URL`, optionally supplying a source app or another configuration file.
+- When: The user runs `chizu check URL`, optionally supplying a source app or another configuration file.
 - Then: Chizu prints the matching rule or default, destination app, and optional profile without opening the browser.
+
+Scenario: Check the configuration file without opening a link
+
+- Given: A configuration file is available.
+- When: The user runs `chizu config check`, optionally supplying another configuration file.
+- Then: Chizu reports whether the JSONC and rules are valid without opening a browser.
 
 Scenario: Apply edited configuration to the next link
 
@@ -117,6 +123,18 @@ Scenario: Do not use another Chrome profile when the specified one cannot be ide
 - Given: The configured Chrome profile name is missing or belongs to multiple profiles.
 - When: A matching link is opened.
 - Then: Chizu does not send the link to Chrome and reports the name and reason it cannot identify the profile.
+
+### Make Chizu the macOS default browser
+
+As a user, I want to inspect and set the system's HTTP and HTTPS handlers so that links from other apps reach Chizu.
+
+**Acceptance criteria:**
+
+Scenario: Inspect and set the macOS default browser
+
+- Given: Chizu is installed as an app.
+- When: The user runs `chizu default status`, then `chizu default set`.
+- Then: The first command displays the HTTP and HTTPS handlers without changing them; the second sets both handlers to Chizu and reports the result.
 
 ## KPI
 

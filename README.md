@@ -23,20 +23,22 @@ Create `~/.config/chizu/config.jsonc` from [the example](examples/config.jsonc),
 Check the file and preview the default, a URL rule, and a source-app rule before switching the default browser:
 
 ```sh
-~/Applications/Chizu.app/Contents/MacOS/chizu check
-~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://example.com/'
-~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://team.example.com/projects/123'
-~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://calendar.example.com/' --source com.apple.mail
+~/Applications/Chizu.app/Contents/MacOS/chizu config check
+~/Applications/Chizu.app/Contents/MacOS/chizu check 'https://example.com/'
+~/Applications/Chizu.app/Contents/MacOS/chizu check 'https://team.example.com/projects/123'
+~/Applications/Chizu.app/Contents/MacOS/chizu check 'https://calendar.example.com/' --source com.apple.mail
 ```
 
-`check` checks the JSONC file and rule expressions. `decide` reads the file and prints which rule, app, and profile would be used; it does not open a browser or change the macOS default. With the example configuration below, the three URLs print `rule=default app=com.apple.Safari profile=-`, `rule=Team links app=company.thebrowser.dia profile=Team`, and `rule=Calendar links from Mail app=com.google.Chrome profile=-`, respectively. The dash means no profile was set. `--source` supplies a simulated sending app for testing `sourceBundleID` rules; omit it to see the result when no sending app is known. Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for all command forms and examples.
+`config check` checks the JSONC file and rule expressions. `check URL` reads the file and prints which rule, app, and profile would be used; it does not open a browser or change the macOS default. With the example configuration below, the three URLs print `rule=default app=com.apple.Safari profile=-`, `rule=Team links app=company.thebrowser.dia profile=Team`, and `rule=Calendar links from Mail app=com.google.Chrome profile=-`, respectively. The dash means no profile was set. `--source` supplies a simulated sending app for testing `sourceBundleID` rules; omit it to see the result when no sending app is known. Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for all command forms and examples.
 
-Set Chizu as the default handler for HTTP and HTTPS, then inspect the result:
+`default set` changes the macOS handler for HTTP and HTTPS to Chizu. `default status` only displays the current handlers. These are separate from the `default` destination in JSONC, which is used when no routing rule matches. Set Chizu as the macOS default browser, then inspect the result:
 
 ```sh
-~/Applications/Chizu.app/Contents/MacOS/chizu make-default
-~/Applications/Chizu.app/Contents/MacOS/chizu default-status
+~/Applications/Chizu.app/Contents/MacOS/chizu default set
+~/Applications/Chizu.app/Contents/MacOS/chizu default status
 ```
+
+The v1.0.0 names `decide URL`, `check` without a URL, `make-default`, and `default-status` still work for existing scripts.
 
 The first Dia route may cause macOS to ask for Automation permission. Allow Chizu to control Dia. If the permission is refused or the named profile does not exist, Chizu reports an error instead of opening the link in a different profile. You can test one URL without changing the default browser:
 
@@ -53,20 +55,25 @@ For example, save this as `~/.config/chizu/config.jsonc` and replace the example
 ```jsonc
 {
   "version": 1,
+  // Fallback for links that match no rule; separate from the macOS default browser.
   "default": { "bundleID": "com.apple.Safari" },
+  // Rules run from top to bottom. The first match wins.
   "rules": [
     {
       "name": "Docs in Chrome",
       "when": { "host": "docs.example.com" },
+      // Use the profile name shown in Chrome.
       "destination": { "bundleID": "com.google.Chrome", "profile": "Work" }
     },
     {
       "name": "Team links",
+      // Both the exact host and path prefix must match.
       "when": { "host": "team.example.com", "pathPrefix": "/projects" },
       "destination": { "bundleID": "company.thebrowser.dia", "profile": "Team" }
     },
     {
       "name": "Calendar links from Mail",
+      // This rule needs macOS to identify Mail as the sending app.
       "when": { "urlContains": "calendar", "sourceBundleID": "com.apple.mail" },
       "destination": { "bundleID": "com.google.Chrome" }
     },
