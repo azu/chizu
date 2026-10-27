@@ -53,7 +53,7 @@ Chizu reads `version`, `default`, and `rules` from JSONC. It accepts `//` and `/
 
 ## APIs and interfaces
 
-The usual configuration path is `~/.config/chizu/config.jsonc`. It may be a symbolic link to a Git managed file. The CLI accepts `--config` to select another file, `validate` to check configuration, and `decide URL` to preview a result without opening the link. The app uses the same evaluator when receiving links.
+The usual configuration path is `~/.config/chizu/config.jsonc`. It may be a symbolic link to a Git managed file. The CLI accepts `--config` to select another file, `validate` to check configuration, and `decide URL` to preview a result without opening the link. `--source` supplies a source app identifier for a CLI preview or manual open. The `--help` output lists each command's form and purpose, the JSONC keys and matching order, and copyable examples. It does not read the configuration file. The README includes a complete generic JSONC example and explains the `decide` output. The app uses the same evaluator when receiving links.
 
 Browsers are selected by bundle identifier. Without a profile, Chizu passes the URL to macOS `open` with the target app specified. For Dia, it passes the profile name and URL as arguments to a fixed AppleScript. For Chrome, it resolves the visible name from saved profile information and passes the selected directory as a launch argument. URLs and names are not interpreted as shell text.
 

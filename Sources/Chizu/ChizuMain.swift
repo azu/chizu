@@ -93,7 +93,64 @@ struct ChizuMain {
 
     private static func runCommand(_ arguments: [String]) throws {
         if arguments == ["--help"] || arguments == ["help"] {
-            print("Usage: chizu validate [--config FILE] | decide URL [--source BUNDLE_ID] [--config FILE] | open URL [--source BUNDLE_ID] [--config FILE] | default-status | make-default")
+            print("""
+            chizu routes HTTP and HTTPS links using a JSONC configuration file.
+
+            Usage:
+              chizu --help
+              chizu help
+              chizu validate [--config FILE]
+              chizu decide URL [--source BUNDLE_ID] [--config FILE]
+              chizu open URL [--source BUNDLE_ID] [--config FILE]
+              chizu default-status
+              chizu make-default
+
+            Commands:
+              validate       Check the configuration without opening a link.
+              decide         Print the matching rule and destination; do not open a browser.
+              open           Open the URL in the selected browser and profile.
+              default-status Show the current HTTP and HTTPS handler bundle IDs.
+              make-default   Set Chizu as the HTTP and HTTPS handler.
+
+            Options:
+              --config FILE      Read another JSONC file instead of
+                                 ~/.config/chizu/config.jsonc.
+              --source BUNDLE_ID Pretend the URL came from this app, for example
+                                 com.apple.mail. Useful for testing sourceBundleID rules.
+
+            Configuration example (~/.config/chizu/config.jsonc):
+              {
+                "version": 1,
+                "default": { "bundleID": "com.apple.Safari" },
+                "rules": [
+                  {
+                    "name": "Docs in Chrome",
+                    "when": { "host": "docs.example.com" },
+                    "destination": { "bundleID": "com.google.Chrome", "profile": "Work" }
+                  }
+                ]
+              }
+
+            Rule syntax:
+              Each rule needs name, when, and destination. A nonempty when may use
+              urlContains, urlRegex, host, pathPrefix, and sourceBundleID.
+              All fields in one when must match; the first matching rule wins.
+              urlRegex is an ICU expression matching the whole URL. If no rule
+              matches, default is used. profile is a visible Dia or Chrome name.
+              JSONC permits // and /* */ comments and trailing commas.
+
+            Examples:
+              chizu validate
+              chizu decide 'https://docs.example.com/guide'
+              chizu decide 'https://example.com/' --source com.apple.mail
+              chizu decide 'https://example.com/' --config ./config.jsonc
+              chizu open 'https://docs.example.com/guide'
+
+            decide output with the example above:
+              rule=Docs in Chrome app=com.google.Chrome profile=Work
+              rule=default app=com.apple.Safari profile=-
+            The dash means no profile was specified.
+            """)
             return
         }
         if arguments == ["default-status"] {

@@ -20,13 +20,16 @@ The commands check the ZIP against its published SHA-256 checksum and install `~
 
 Create `~/.config/chizu/config.jsonc` from [the example](examples/config.jsonc), then edit the destination app IDs and profile names. This is an ordinary file and can be a symbolic link into a dotfiles repository. Keep personal rules out of the public Chizu repository.
 
-Check the file and preview two URLs before switching the default browser:
+Check the file and preview the default, a URL rule, and a source-app rule before switching the default browser:
 
 ```sh
 ~/Applications/Chizu.app/Contents/MacOS/chizu validate
 ~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://example.com/'
-~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://team.example.com/projects/123' --source com.apple.mail
+~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://team.example.com/projects/123'
+~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://calendar.example.com/' --source com.apple.mail
 ```
+
+`validate` checks the JSONC file and rule expressions. `decide` reads the file and prints which rule, app, and profile would be used; it does not open a browser or change the macOS default. With the example configuration below, the three URLs print `rule=default app=com.apple.Safari profile=-`, `rule=Team links app=company.thebrowser.dia profile=Team`, and `rule=Calendar links from Mail app=com.google.Chrome profile=-`, respectively. The dash means no profile was set. `--source` supplies a simulated sending app for testing `sourceBundleID` rules; omit it to see the result when no sending app is known. Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for all command forms and examples.
 
 Set Chizu as the default handler for HTTP and HTTPS, then inspect the result:
 
@@ -45,6 +48,34 @@ The first Dia route may cause macOS to ask for Automation permission. Allow Chiz
 
 The JSON object has a `version`, one `default` destination, and an ordered `rules` array. Each rule has a `name`, a `when` object, and a `destination`. The first matching rule wins. All fields in one `when` object must match.
 
+For example, save this as `~/.config/chizu/config.jsonc` and replace the example hosts and profile names with your own:
+
+```jsonc
+{
+  "version": 1,
+  "default": { "bundleID": "com.apple.Safari" },
+  "rules": [
+    {
+      "name": "Docs in Chrome",
+      "when": { "host": "docs.example.com" },
+      "destination": { "bundleID": "com.google.Chrome", "profile": "Work" }
+    },
+    {
+      "name": "Team links",
+      "when": { "host": "team.example.com", "pathPrefix": "/projects" },
+      "destination": { "bundleID": "company.thebrowser.dia", "profile": "Team" }
+    },
+    {
+      "name": "Calendar links from Mail",
+      "when": { "urlContains": "calendar", "sourceBundleID": "com.apple.mail" },
+      "destination": { "bundleID": "com.google.Chrome" }
+    },
+  ],
+}
+```
+
+The first rule sends every URL on `docs.example.com` to the Chrome profile named `Work`. The second requires both the exact host and a path starting with `/projects` before selecting Dia's `Team` profile. The third applies only when the URL contains `calendar` and the sending app is Mail. All other links use Safari. A `when` object must contain at least one condition; rules are checked from top to bottom.
+
 | Field in `when` | Match |
 | --- | --- |
 | `urlContains` | Text anywhere in the full URL, ignoring letter case |
@@ -55,7 +86,7 @@ The JSON object has a `version`, one `default` destination, and an ordered `rule
 
 A destination needs `bundleID`. A `profile` can be added for Dia (`company.thebrowser.dia`) or Google Chrome (`com.google.Chrome`). Use the profile name shown in the browser, with matching letter case. For Chrome, Chizu finds that name in Chrome's local profile list and passes its directory to Chrome; a missing or duplicate name fails instead of choosing another profile. The source app may be unavailable for some links; those rules then do not match. Direct links opened inside a browser do not normally pass through the macOS default browser. Chizu reads the file again for each new link, so editing does not require a restart.
 
-The configuration uses JSONC: `//` and `/* ... */` comments and trailing commas are accepted. Strings and keys still use JSON double quotes. An invalid regular expression fails validation instead of silently skipping a rule. A pattern such as `.*\\.pdf` matches a URL ending in `.pdf`; use `(?i)` at the start for case-insensitive matching. Chizu accepts trailing commas as an extension permitted by the [JSONC specification](https://jsonc.org/).
+The configuration uses JSONC: `//` and `/* ... */` comments and trailing commas are accepted. Strings and keys still use JSON double quotes. An invalid regular expression fails validation instead of silently skipping a rule. For example, `"urlRegex": "(?i).*\\.pdf"` matches a URL ending in `.pdf`, ignoring letter case; a URL with a query string after `.pdf` does not match. Chizu accepts trailing commas as an extension permitted by the [JSONC specification](https://jsonc.org/).
 
 The path can be overridden for CLI checks with `--config FILE`. A missing or invalid config, missing browser, or missing profile is reported as an error. Chizu never silently falls back to another browser or profile.
 

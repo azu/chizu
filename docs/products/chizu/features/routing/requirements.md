@@ -70,6 +70,18 @@ As a user, I want to edit and sync routing in a regular file so that I can inspe
 
 **Acceptance criteria:**
 
+Scenario: Find the configuration syntax and command examples
+
+- Given: Chizu is installed.
+- When: The user runs `chizu --help`.
+- Then: Chizu shows the command forms, the JSONC structure and rule fields, and examples without requiring a configuration file.
+
+Scenario: Preview a routing decision without opening the link
+
+- Given: A valid configuration file and an HTTP or HTTPS URL.
+- When: The user runs `chizu decide URL`, optionally supplying a source app or another configuration file.
+- Then: Chizu prints the matching rule or default, destination app, and optional profile without opening the browser.
+
 Scenario: Apply edited configuration to the next link
 
 - Given: Chizu can read a JSON configuration file containing comments.

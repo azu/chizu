@@ -13,5 +13,10 @@
       "when": { "host": "team.example.com", "pathPrefix": "/projects" },
       "destination": { "bundleID": "company.thebrowser.dia", "profile": "Team" }
     },
+    {
+      "name": "Calendar links from Mail",
+      "when": { "urlContains": "calendar", "sourceBundleID": "com.apple.mail" },
+      "destination": { "bundleID": "com.google.Chrome" }
+    },
   ],
 }
