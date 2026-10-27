@@ -53,7 +53,9 @@ JSONC設定の`version`、`default`、`rules`を読み取ります。`//`と`/* 
 
 ## API・インターフェース
 
-通常の設定場所は`~/.config/chizu/config.jsonc`です。シンボリックリンクにも対応し、Git管理しているファイルをそのまま参照できます。コマンドラインでは`--config`で別のファイルを指定し、`config check`で設定を検査し、`check URL`で起動せずに結果を確認します。`--source`はCLIでの確認や手動起動に使うリンク元アプリ識別子です。`default status`はmacOSのHTTPとHTTPSの行き先を読み取り、`default set`は両方をChizuへ変更します。JSONCの`default`は一致するルールがないときの行き先であり、macOSの設定とは別です。v1.0.0の`decide URL`、URLなしの`check`、`default-status`、`make-default`は互換用として受け付けますが、主な使用例からは外します。`--help`には各コマンドの書式と用途、JSONCの項目と照合順序、コピーして使える例を表示し、設定ファイルは読みません。READMEには汎用のJSONC設定例を載せ、`check URL`の出力を説明します。アプリはリンク受信時に同じ評価処理を使います。
+通常の設定場所は`~/.config/chizu/config.jsonc`です。シンボリックリンクにも対応し、Git管理しているファイルをそのまま参照できます。`config init`は、Safariを既定の行き先とする空のルールを含む最小限のJSONCファイルを本体の内容から作り、ネットワーク通信を必要としません。親ディレクトリを作り、所有者だけが読める権限で設定ファイルを新規作成専用で開くため、既存のファイルやシンボリックリンクは置き換えません。`--config FILE`で初期設定の作成、検査、確認に使う別のファイルを指定できます。
+
+`config check`で設定を検査し、`check URL`で起動せずに結果を確認します。`--source`はCLIでの確認や手動起動に使うリンク元アプリ識別子です。`default status`はmacOSのHTTPとHTTPSの行き先を読み取り、`default set`は両方をChizuへ変更します。JSONCの`default`は一致するルールがないときの行き先であり、macOSの設定とは別です。v1.0.0の`decide URL`、URLなしの`check`、`default-status`、`make-default`は互換用として受け付けますが、主な使用例からは外します。`--help`には各コマンドの書式と用途、JSONCの項目と照合順序、コピーして使える例を表示し、設定ファイルは読みません。READMEには汎用のJSONC設定例を載せ、`check URL`の出力を説明します。アプリはリンク受信時に同じ評価処理を使います。
 
 ブラウザはアプリ識別子で指定します。プロファイルを指定しない場合はmacOSの`open`コマンドに対象アプリを明示してURLを渡します。Diaのプロファイル指定は、固定のAppleScriptにプロファイル名とURLを引数として渡します。Chromeのプロファイル指定は表示名を保存情報と照合してから、選んだディレクトリを起動引数として渡します。URLや名前をシェルの文字列として解釈しません。
 

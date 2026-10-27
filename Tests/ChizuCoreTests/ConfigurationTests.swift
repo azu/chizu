@@ -21,6 +21,42 @@ import Testing
     #expect(fallback.destination.profile == "Personal")
 }
 
+@Test func createsStarterConfigurationWithoutReplacingExistingPaths() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let config = directory.appendingPathComponent("nested/config.jsonc")
+
+    try Configuration.createStarter(at: config)
+    let starter = try Configuration.load(from: config)
+    #expect(starter.default == Destination(bundleID: "com.apple.Safari"))
+    #expect(starter.rules.isEmpty)
+    let attributes = try FileManager.default.attributesOfItem(atPath: config.path)
+    #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
+
+    let original = try Data(contentsOf: config)
+    #expect(throws: ChizuError.configurationAlreadyExists(config.path)) {
+        try Configuration.createStarter(at: config)
+    }
+    #expect(try Data(contentsOf: config) == original)
+
+    let link = directory.appendingPathComponent("linked.jsonc")
+    try FileManager.default.createSymbolicLink(at: link, withDestinationURL: config)
+    #expect(throws: ChizuError.configurationAlreadyExists(link.path)) {
+        try Configuration.createStarter(at: link)
+    }
+    #expect(try FileManager.default.destinationOfSymbolicLink(atPath: link.path) == config.path)
+    #expect(try Data(contentsOf: config) == original)
+
+    let danglingLink = directory.appendingPathComponent("dangling.jsonc")
+    let missingTarget = directory.appendingPathComponent("missing.jsonc")
+    try FileManager.default.createSymbolicLink(at: danglingLink, withDestinationURL: missingTarget)
+    #expect(throws: ChizuError.configurationAlreadyExists(danglingLink.path)) {
+        try Configuration.createStarter(at: danglingLink)
+    }
+    #expect(try FileManager.default.destinationOfSymbolicLink(atPath: danglingLink.path) == missingTarget.path)
+    #expect(!FileManager.default.fileExists(atPath: missingTarget.path))
+}
+
 @Test func combinedConditionsAndUnknownSource() throws {
     let configuration = Configuration(
         default: Destination(bundleID: "com.apple.Safari"),

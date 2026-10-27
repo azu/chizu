@@ -101,6 +101,7 @@ struct ChizuMain {
               chizu help
               chizu check URL [--source BUNDLE_ID] [--config FILE]
               chizu open URL [--source BUNDLE_ID] [--config FILE]
+              chizu config init [--config FILE]
               chizu config check [--config FILE]
               chizu default status
               chizu default set
@@ -108,12 +109,13 @@ struct ChizuMain {
             Commands:
               check URL      Print the matching rule and destination without opening a browser.
               open URL       Open the URL in the selected browser and profile.
+              config init    Create a minimal config file without replacing an existing file.
               config check   Check the JSONC configuration without opening a link.
               default status Show the current macOS HTTP and HTTPS handlers.
               default set    Set Chizu as the macOS HTTP and HTTPS handler.
 
             Options:
-              --config FILE      Read another JSONC file instead of
+              --config FILE      Use another JSONC file instead of
                                  ~/.config/chizu/config.jsonc.
               --source BUNDLE_ID Pretend the URL came from this app, for example
                                  com.apple.mail. Useful for testing sourceBundleID rules.
@@ -142,6 +144,8 @@ struct ChizuMain {
               JSONC permits // and /* */ comments and trailing commas.
 
             Examples:
+              chizu config init
+              chizu config init --config ./config.jsonc
               chizu config check
               chizu check 'https://docs.example.com/guide'
               chizu check 'https://example.com/' --source com.apple.mail
@@ -184,6 +188,20 @@ struct ChizuMain {
                 throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
             }
             print("Chizu is the default handler for http and https")
+            return
+        }
+        if arguments.starts(with: ["config", "init"]) {
+            let fileURL: URL
+            let options = Array(arguments.dropFirst(2))
+            if options.isEmpty {
+                fileURL = RouteService.defaultConfigurationURL
+            } else if options.count == 2, options[0] == "--config" {
+                fileURL = URL(fileURLWithPath: options[1])
+            } else {
+                throw ChizuError.invalidConfiguration("config init accepts only --config FILE")
+            }
+            try Configuration.createStarter(at: fileURL)
+            print("Created configuration at \(fileURL.path)")
             return
         }
         let isConfigurationCheck = arguments.starts(with: ["config", "check"])

@@ -1,12 +1,15 @@
+import Darwin
 import Foundation
 
 public enum ChizuError: Error, LocalizedError, Equatable {
     case invalidConfiguration(String)
+    case configurationAlreadyExists(String)
     case unsupportedURL(String)
 
     public var errorDescription: String? {
         switch self {
         case let .invalidConfiguration(message): "Invalid configuration: \(message)"
+        case let .configurationAlreadyExists(path): "Configuration already exists at \(path); edit it instead"
         case let .unsupportedURL(value): "Only HTTP and HTTPS URLs are supported: \(value)"
         }
     }
@@ -130,6 +133,38 @@ public struct Configuration: Codable, Equatable, Sendable {
         self.version = version
         self.default = `default`
         self.rules = rules
+    }
+
+    public static func createStarter(at fileURL: URL) throws {
+        let contents = """
+            {
+              "version": 1,
+              // Fallback for links that match no rule.
+              "default": { "bundleID": "com.apple.Safari" },
+              // Add rules here in priority order.
+              "rules": []
+            }
+            """ + "\n"
+        try FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        let descriptor = Darwin.open(fileURL.path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
+        guard descriptor >= 0 else {
+            let errorNumber = errno
+            if errorNumber == EEXIST {
+                throw ChizuError.configurationAlreadyExists(fileURL.path)
+            }
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errorNumber))
+        }
+        let file = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        do {
+            try file.write(contentsOf: Data(contents.utf8))
+            try file.close()
+        } catch {
+            try? file.close()
+            try? FileManager.default.removeItem(at: fileURL)
+            throw error
+        }
     }
 
     public static func load(from fileURL: URL) throws -> Configuration {

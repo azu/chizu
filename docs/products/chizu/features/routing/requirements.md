@@ -8,7 +8,7 @@ This feature chooses where to open a web link received by [Chizu](../../product.
 
 ### Scope
 
-It covers HTTP and HTTPS links; conditions on full URL text, regular expressions, host, path, and an identified source app; browser and Dia or Chrome profile destinations; file based configuration; previewing the routing result; and inspecting or setting the macOS default browser.
+It covers HTTP and HTTPS links; conditions on full URL text, regular expressions, host, path, and an identified source app; browser and Dia or Chrome profile destinations; creating and editing file based configuration; previewing the routing result; and inspecting or setting the macOS default browser.
 
 ### Out of scope
 
@@ -75,6 +75,18 @@ Scenario: Find the configuration syntax and command examples
 - Given: Chizu is installed.
 - When: The user runs `chizu --help`.
 - Then: Chizu shows the command forms, the JSONC structure and rule fields, and examples without requiring a configuration file.
+
+Scenario: Create an initial configuration without downloading a sample
+
+- Given: No configuration file exists at the usual path or an explicitly selected path.
+- When: The user runs `chizu config init`, optionally supplying `--config FILE`.
+- Then: Chizu creates the parent directory and a valid JSONC file with Safari as the fallback and no rules, and prints the created path.
+
+Scenario: Preserve an existing configuration when initializing
+
+- Given: A file or symbolic link already exists at the selected configuration path.
+- When: The user runs `chizu config init` for that path.
+- Then: Chizu reports that the path already exists and leaves its contents or symbolic link unchanged.
 
 Scenario: Preview a routing decision without opening the link
 

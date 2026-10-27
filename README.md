@@ -20,14 +20,13 @@ The commands check the ZIP against its published SHA-256 checksum and install `~
 
 ## Set up routing
 
-If you do not have a config yet, copy the [example](examples/config.jsonc):
+Create a starter config with Safari as the fallback and no rules:
 
 ```sh
-mkdir -p "$HOME/.config/chizu"
-curl -fL https://raw.githubusercontent.com/azu/chizu/main/examples/config.jsonc -o "$HOME/.config/chizu/config.jsonc"
+~/Applications/Chizu.app/Contents/MacOS/chizu config init
 ```
 
-Edit `~/.config/chizu/config.jsonc` with your browsers, profiles, and rules. The copy command replaces an existing file, so skip it if you already have one. You can also link this file to your dotfiles repository.
+Edit `~/.config/chizu/config.jsonc` with your browsers, profiles, and rules. The command above leaves an existing file or symbolic link untouched, so you can keep this file in your dotfiles repository. See the [full example](examples/config.jsonc) for more rule types.
 
 Check the config and preview where one of your links would go:
 
@@ -53,14 +52,16 @@ Copy this prompt and add your routing preferences at the end:
 Set up Chizu on this Mac. First run
 ~/Applications/Chizu.app/Contents/MacOS/chizu --help and follow its syntax.
 
-Read ~/.config/chizu/config.jsonc. If it does not exist, create it from
-https://github.com/azu/chizu/blob/main/examples/config.jsonc.
+Read ~/.config/chizu/config.jsonc. If it does not exist, run
+~/Applications/Chizu.app/Contents/MacOS/chizu config init to create it.
 Ask me for any routing details you cannot determine. Keep my personal rules
 in my config file, outside the public Chizu repository.
 
-Using the installed chizu binary, run config check. Then run check URL for
-links covering each rule and the fallback. Show me the results. If the checks
-pass, run default set and default status.
+Run ~/Applications/Chizu.app/Contents/MacOS/chizu config check. Then run
+~/Applications/Chizu.app/Contents/MacOS/chizu check URL for links covering
+each rule and the fallback. Show me the results. If the checks pass, run
+~/Applications/Chizu.app/Contents/MacOS/chizu default set and
+~/Applications/Chizu.app/Contents/MacOS/chizu default status.
 
 My routing preferences:
 ```
