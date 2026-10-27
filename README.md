@@ -18,27 +18,54 @@ xattr -dr com.apple.quarantine "$HOME/Applications/Chizu.app" &&
 
 The commands check the ZIP against its published SHA-256 checksum and install `~/Applications/Chizu.app`. The app uses a fixed self-signed certificate and is not notarized. The `xattr` command removes the downloaded app's quarantine attribute so macOS can open it. Installing over a locally signed copy may require you to allow Chizu to control Dia again.
 
-Create `~/.config/chizu/config.jsonc` from [the example](examples/config.jsonc), then edit the destination app IDs and profile names. This is an ordinary file and can be a symbolic link into a dotfiles repository. Keep personal rules out of the public Chizu repository.
+## Set up routing
 
-Check the file and preview the default, a URL rule, and a source-app rule before switching the default browser:
+If you do not have a config yet, copy the [example](examples/config.jsonc):
+
+```sh
+mkdir -p "$HOME/.config/chizu"
+curl -fL https://raw.githubusercontent.com/azu/chizu/main/examples/config.jsonc -o "$HOME/.config/chizu/config.jsonc"
+```
+
+Edit `~/.config/chizu/config.jsonc` with your browsers, profiles, and rules. The copy command replaces an existing file, so skip it if you already have one. You can also link this file to your dotfiles repository.
+
+Check the config and preview where one of your links would go:
 
 ```sh
 ~/Applications/Chizu.app/Contents/MacOS/chizu config check
 ~/Applications/Chizu.app/Contents/MacOS/chizu check 'https://example.com/'
-~/Applications/Chizu.app/Contents/MacOS/chizu check 'https://team.example.com/projects/123'
-~/Applications/Chizu.app/Contents/MacOS/chizu check 'https://calendar.example.com/' --source com.apple.mail
 ```
 
-`config check` checks the JSONC file and rule expressions. `check URL` reads the file and prints which rule, app, and profile would be used; it does not open a browser or change the macOS default. With the example configuration below, the three URLs print `rule=default app=com.apple.Safari profile=-`, `rule=Team links app=company.thebrowser.dia profile=Team`, and `rule=Calendar links from Mail app=com.google.Chrome profile=-`, respectively. The dash means no profile was set. `--source` supplies a simulated sending app for testing `sourceBundleID` rules; omit it to see the result when no sending app is known. Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for all command forms and examples.
-
-`default set` changes the macOS handler for HTTP and HTTPS to Chizu. `default status` only displays the current handlers. These are separate from the `default` destination in JSONC, which is used when no routing rule matches. Set Chizu as the macOS default browser, then inspect the result:
+`config check` reports config errors. `check URL` prints the matching rule, browser, and profile without opening the link. Replace the example URL with a link you actually use. Then set Chizu as the macOS default browser and confirm its status:
 
 ```sh
 ~/Applications/Chizu.app/Contents/MacOS/chizu default set
 ~/Applications/Chizu.app/Contents/MacOS/chizu default status
 ```
 
-The v1.0.0 names `decide URL`, `check` without a URL, `make-default`, and `default-status` still work for existing scripts.
+`default set` changes the macOS HTTP and HTTPS handlers. It is separate from the `default` destination in the config file, which handles links that match no rule.
+
+### Configure with an AI
+
+Copy this prompt and add your routing preferences at the end:
+
+```text
+Set up Chizu on this Mac. First run
+~/Applications/Chizu.app/Contents/MacOS/chizu --help and follow its syntax.
+
+Read ~/.config/chizu/config.jsonc. If it does not exist, create it from
+https://github.com/azu/chizu/blob/main/examples/config.jsonc.
+Ask me for any routing details you cannot determine. Keep my personal rules
+in my config file, outside the public Chizu repository.
+
+Using the installed chizu binary, run config check. Then run check URL for
+links covering each rule and the fallback. Show me the results. If the checks
+pass, run default set and default status.
+
+My routing preferences:
+```
+
+Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for the full command and config reference. The v1.0.0 names `decide URL`, `check` without a URL, `make-default`, and `default-status` still work for existing scripts.
 
 The first Dia route may cause macOS to ask for Automation permission. Allow Chizu to control Dia. If the permission is refused or the named profile does not exist, Chizu reports an error instead of opening the link in a different profile. You can test one URL without changing the default browser:
 
@@ -82,6 +109,8 @@ For example, save this as `~/.config/chizu/config.jsonc` and replace the example
 ```
 
 The first rule sends every URL on `docs.example.com` to the Chrome profile named `Work`. The second requires both the exact host and a path starting with `/projects` before selecting Dia's `Team` profile. The third applies only when the URL contains `calendar` and the sending app is Mail. All other links use Safari. A `when` object must contain at least one condition; rules are checked from top to bottom.
+
+For a `sourceBundleID` rule, preview the route with `check URL --source BUNDLE_ID`. For example, `chizu check 'https://calendar.example.com/' --source com.apple.mail` simulates a link sent by Mail. Without `--source`, no sending app is assumed during a CLI check.
 
 | Field in `when` | Match |
 | --- | --- |
