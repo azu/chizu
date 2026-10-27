@@ -160,22 +160,16 @@ struct ChizuMain {
             The dash means no profile was specified.
             The JSONC default is a fallback destination; default status/set manage
             the macOS default browser.
-
-            v1.0.0 compatibility aliases:
-              decide URL    = check URL
-              check         = config check (when no URL is supplied)
-              default-status = default status
-              make-default   = default set
             """)
             return
         }
-        if arguments == ["default", "status"] || arguments == ["default-status"] {
+        if arguments == ["default", "status"] {
             for scheme in ["http", "https"] {
                 print("\(scheme): \(defaultHandler(for: scheme) ?? "none")")
             }
             return
         }
-        if arguments == ["default", "set"] || arguments == ["make-default"] {
+        if arguments == ["default", "set"] {
             guard NSWorkspace.shared.urlForApplication(withBundleIdentifier: "dev.azu.chizu") != nil else {
                 throw ChizuError.invalidConfiguration("install Chizu.app before setting it as the default browser")
             }
@@ -206,7 +200,7 @@ struct ChizuMain {
         }
         let isConfigurationCheck = arguments.starts(with: ["config", "check"])
         guard let command = arguments.first,
-              ["check", "decide", "open"].contains(command) || isConfigurationCheck else {
+              ["check", "open"].contains(command) || isConfigurationCheck else {
             throw ChizuError.invalidConfiguration("unknown command; use --help")
         }
         var urlString: String?
@@ -230,7 +224,7 @@ struct ChizuMain {
             }
         }
 
-        if isConfigurationCheck || (command == "check" && urlString == nil && sourceBundleID == nil) {
+        if isConfigurationCheck {
             guard urlString == nil, sourceBundleID == nil else {
                 throw ChizuError.invalidConfiguration("config check accepts only --config")
             }
@@ -243,7 +237,7 @@ struct ChizuMain {
             throw ChizuError.invalidConfiguration("a URL is required")
         }
         let decision = try RouteService.decide(url, sourceBundleID: sourceBundleID, configurationURL: configurationURL)
-        if command == "check" || command == "decide" {
+        if command == "check" {
             print("rule=\(decision.ruleName ?? "default") app=\(decision.destination.bundleID) profile=\(decision.destination.profile ?? "-")")
         } else {
             try RouteService.open(url, decision: decision)

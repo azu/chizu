@@ -100,6 +100,12 @@ Scenario: Check the configuration file without opening a link
 - When: The user runs `chizu config check`, optionally supplying another configuration file.
 - Then: Chizu reports whether the JSONC and rules are valid without opening a browser.
 
+Scenario: Reject retired command names
+
+- Given: Chizu is installed.
+- When: The user runs `decide URL`, `default-status`, `make-default`, or `check` without a URL.
+- Then: Chizu exits with an error without opening a link, checking the configuration, or changing the macOS default browser.
+
 Scenario: Apply edited configuration to the next link
 
 - Given: Chizu can read a JSON configuration file containing comments.

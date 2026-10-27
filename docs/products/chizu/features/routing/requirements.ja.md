@@ -100,6 +100,12 @@ Scenario: リンクを開かずに設定ファイルを検査する
 - When: 利用者が`chizu config check`を実行し、必要に応じて別の設定ファイルを指定する。
 - Then: ブラウザを開かず、JSONCとルールが有効かを知らせる。
 
+Scenario: 廃止したコマンド名を受け付けない
+
+- Given: Chizuがインストールされている。
+- When: 利用者が`decide URL`、`default-status`、`make-default`、またはURLなしの`check`を実行する。
+- Then: リンクを開かず、設定を検査せず、macOSの既定ブラウザも変更せずにエラーで終了する。
+
 Scenario: コメント付きの設定を変更した場合、次のリンクから新しい内容を使う
 
 - Given: Chizuが読み取れるコメント付きJSONの設定ファイルがある。

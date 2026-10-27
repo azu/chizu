@@ -13,4 +13,4 @@ codesign --verify --strict "$destination"
 register=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 "$register" -f "$destination"
 printf 'Installed %s\n' "$destination"
-printf 'Run %s/Contents/MacOS/chizu default-status to inspect the current browser.\n' "$destination"
+printf 'Run %s/Contents/MacOS/chizu default status to inspect the current browser.\n' "$destination"

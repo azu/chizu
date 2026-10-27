@@ -66,7 +66,7 @@ each rule and the fallback. Show me the results. If the checks pass, run
 My routing preferences:
 ```
 
-Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for the full command and config reference. The v1.0.0 names `decide URL`, `check` without a URL, `make-default`, and `default-status` still work for existing scripts.
+Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for the full command and config reference.
 
 The first Dia route may cause macOS to ask for Automation permission. Allow Chizu to control Dia. If the permission is refused or the named profile does not exist, Chizu reports an error instead of opening the link in a different profile. You can test one URL without changing the default browser:
 
