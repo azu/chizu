@@ -1,0 +1,82 @@
+# Chizu
+
+Chizu is a small macOS default browser that sends links to a configured browser and, for Dia, a named profile. It reads rules from a JSONC file on every link. There is no browser picker or settings window.
+
+## Build and install
+
+Requires macOS 14 or later and Xcode Command Line Tools. Run:
+
+```sh
+scripts/install-app.sh
+```
+
+The script installs `~/Applications/Chizu.app`. It signs the app ad hoc by default. For a stable local signature, set `CHIZU_SIGNING_IDENTITY` to a code signing identity before running the script. A stable signature helps macOS retain the Automation permission used for Dia.
+
+Create `~/.config/chizu/config.jsonc` from [the example](examples/config.jsonc), then edit the destination app IDs and profile names. This is an ordinary file and can be a symbolic link into a dotfiles repository. Keep personal rules out of the public Chizu repository.
+
+Check the file and preview two URLs before switching the default browser:
+
+```sh
+~/Applications/Chizu.app/Contents/MacOS/chizu validate
+~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://example.com/'
+~/Applications/Chizu.app/Contents/MacOS/chizu decide 'https://team.example.com/projects/123' --source com.apple.mail
+```
+
+Set Chizu as the default handler for HTTP and HTTPS, then inspect the result:
+
+```sh
+~/Applications/Chizu.app/Contents/MacOS/chizu make-default
+~/Applications/Chizu.app/Contents/MacOS/chizu default-status
+```
+
+The first Dia route may cause macOS to ask for Automation permission. Allow Chizu to control Dia. If the permission is refused or the named profile does not exist, Chizu reports an error instead of opening the link in a different profile. You can test one URL without changing the default browser:
+
+```sh
+~/Applications/Chizu.app/Contents/MacOS/chizu open 'https://team.example.com/projects/123'
+```
+
+## Configuration
+
+The JSON object has a `version`, one `default` destination, and an ordered `rules` array. Each rule has a `name`, a `when` object, and a `destination`. The first matching rule wins. All fields in one `when` object must match.
+
+| Field in `when` | Match |
+| --- | --- |
+| `urlContains` | Text anywhere in the full URL, ignoring letter case |
+| `urlRegex` | ICU regular expression matching the whole URL; case-sensitive unless the pattern uses `(?i)` |
+| `host` | Exact host, ignoring letter case |
+| `pathPrefix` | Start of the path, respecting letter case |
+| `sourceBundleID` | Bundle ID of the sending app, when macOS provides one |
+
+A destination needs `bundleID`. A `profile` can be added only for Dia (`company.thebrowser.dia`) and must match a profile name visible in Dia's AppleScript interface. The source app may be unavailable for some links; those rules then do not match. Direct links opened inside a browser do not normally pass through the macOS default browser. Chizu reads the file again for each new link, so editing does not require a restart.
+
+The configuration uses JSONC: `//` and `/* ... */` comments and trailing commas are accepted. Strings and keys still use JSON double quotes. An invalid regular expression fails validation instead of silently skipping a rule. A pattern such as `.*\\.pdf` matches a URL ending in `.pdf`; use `(?i)` at the start for case-insensitive matching. Chizu accepts trailing commas as an extension permitted by the [JSONC specification](https://jsonc.org/).
+
+The path can be overridden for CLI checks with `--config FILE`. A missing or invalid config, missing browser, or missing Dia profile is reported as an error. Chizu never silently falls back to another browser or profile.
+
+## Development
+
+```sh
+swift test
+./bin/sdev lint
+```
+
+The [specifications](docs/README.md) explain the behavior and implementation. Chizu uses macOS URL handling documented by [Apple](https://developer.apple.com/documentation/appkit/nsapplicationdelegate/application(_:open:)). Dia profile routing uses Dia's installed AppleScript dictionary. [Dia's release notes](https://www.diabrowser.com/release-notes/1-22-0-dont-think) document profile switching, while [Dia Router](https://github.com/jdsimcoe/dia-router) illustrates a different shortcut based approach.
+
+## Releases
+
+`VERSION` is the release version. The **Create Release PR** workflow bumps it and opens a PR. Merging that PR creates the matching `v` tag, runs Swift tests, signs the Apple Silicon app, and publishes `chizu-macos-arm64.zip` with a SHA-256 file. An existing tag can be retried with the **Release** workflow. The release PR body becomes the release notes.
+
+The release certificate is fixed across versions so macOS can recognize the same signing identity. To initialize it once on the release author's Mac, run:
+
+```sh
+bash scripts/setup-release-signing.sh
+bash scripts/trust-release-certificate.sh
+```
+
+Commit only the generated `config/release-signing.json`. Back up the ignored `.release-signing/` directory securely. Before using the workflows, register `CODE_SIGN_P12_BASE64` from `base64 < .release-signing/code-signing.p12` and `CODE_SIGN_P12_PASSWORD` from `.release-signing/p12-password` as GitHub Actions secrets. Do not paste either value into an issue, PR, or log. Locally, `bash scripts/package-release.sh` creates the same ZIP and checksum after the certificate is trusted.
+
+The ZIP is signed with the fixed Chizu release certificate. The current pipeline does not notarize the app or provide in-app updates. Installing it over a build signed with another certificate may require macOS Automation permission for Dia to be granted again.
+
+## License
+
+Chizu is available under the [MIT License](LICENSE).

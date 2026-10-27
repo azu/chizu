@@ -1,0 +1,54 @@
+name: Create Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: SemVer increment
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions: {}
+
+concurrency:
+  group: create-release-pr
+  cancel-in-progress: false
+
+jobs:
+  create:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - run: bash scripts/test-version.sh
+      - name: Bump version and open PR
+        env:
+          BUMP: ${{ inputs.bump }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEW_VERSION="$(bash scripts/version.sh --bump "$BUMP")"
+          bash scripts/release-notes.sh generate "v$NEW_VERSION" "$(git rev-parse HEAD)" "$RUNNER_TEMP/release-body.md"
+          branch="release/v$NEW_VERSION"
+          git switch -c "$branch"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add VERSION
+          git commit -m "chore: release v$NEW_VERSION"
+          gh auth setup-git
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" --title "Release v$NEW_VERSION" --body-file "$RUNNER_TEMP/release-body.md"

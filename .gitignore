@@ -1,0 +1,5 @@
+/.sdev/
+/.build/
+/dist/
+/.release-signing/
+/.release-signing.staging.*/

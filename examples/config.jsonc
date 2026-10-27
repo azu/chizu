@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  // Choose a browser or a Dia profile for links with no matching rule.
+  "default": { "bundleID": "com.apple.Safari" },
+  "rules": [
+    {
+      "name": "Team links",
+      "when": { "host": "team.example.com", "pathPrefix": "/projects" },
+      "destination": { "bundleID": "company.thebrowser.dia", "profile": "Team" }
+    },
+  ],
+}

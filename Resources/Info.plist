@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleExecutable</key><string>chizu</string>
+    <key>CFBundleIdentifier</key><string>dev.azu.chizu</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleName</key><string>Chizu</string>
+    <key>CFBundleDisplayName</key><string>Chizu</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>0.1.0</string>
+    <key>CFBundleVersion</key><string>1</string>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>LSUIElement</key><true/>
+    <key>NSAppleEventsUsageDescription</key><string>Chizu opens links in the Dia profile you selected in its configuration file.</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key><string>Viewer</string>
+            <key>CFBundleURLName</key><string>Web links</string>
+            <key>CFBundleURLSchemes</key>
+            <array><string>http</string><string>https</string></array>
+        </dict>
+    </array>
+</dict>
+</plist>

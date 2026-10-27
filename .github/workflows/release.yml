@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to release (e.g. v0.1.0)
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.event.pull_request.number || inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       startsWith(github.event.pull_request.head.ref, 'release/v'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      commit: ${{ steps.version.outputs.commit }}
+      pr: ${{ steps.version.outputs.pr }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate version and create release tag
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          INPUT_TAG: ${{ inputs.tag }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(bash scripts/version.sh)"
+          tag="v$version"
+          commit="$(git rev-parse HEAD)"
+          if [[ "$EVENT_NAME" == pull_request ]]; then
+            [[ "$HEAD_BRANCH" == "release/$tag" ]]
+            if git rev-parse "refs/tags/$tag" >/dev/null 2>&1; then
+              [[ "$(git rev-parse "$tag^{commit}")" == "$commit" ]]
+            else
+              git tag "$tag" "$commit"
+              gh auth setup-git
+              git push origin "refs/tags/$tag"
+            fi
+          elif [[ "$EVENT_NAME" == workflow_dispatch ]]; then
+            bash scripts/version.sh --check-tag "$INPUT_TAG"
+            [[ "$(git rev-parse "$INPUT_TAG^{commit}")" == "$commit" ]]
+          else
+            bash scripts/version.sh --check-tag "$GITHUB_REF_NAME"
+          fi
+          printf 'tag=%s\ncommit=%s\npr=%s\n' "$tag" "$commit" "$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    runs-on: macos-26
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          persist-credentials: false
+      - run: bash scripts/test-version.sh
+      - run: bash scripts/test-release-notes.sh
+      - run: swift test
+      - name: Package Apple Silicon app
+        env:
+          CODE_SIGN_P12_BASE64: ${{ secrets.CODE_SIGN_P12_BASE64 }}
+          CODE_SIGN_P12_PASSWORD: ${{ secrets.CODE_SIGN_P12_PASSWORD }}
+        run: bash scripts/package-release.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: |
+            dist/chizu-macos-arm64.zip
+            dist/chizu-macos-arm64.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          COMMIT: ${{ needs.prepare.outputs.commit }}
+          RELEASE_PR: ${{ needs.prepare.outputs.pr }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/release-notes.sh resolve "$TAG" "$COMMIT" "$RUNNER_TEMP/release-body.md" "$RELEASE_PR"
+          if gh release view "$TAG" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            jq -e '.isDraft == true' "$RUNNER_TEMP/release.json"
+            gh release edit "$TAG" --notes-file "$RUNNER_TEMP/release-body.md"
+          else
+            gh release create "$TAG" --verify-tag --draft --title "$TAG" --notes-file "$RUNNER_TEMP/release-body.md"
+          fi
+          gh release upload "$TAG" dist/chizu-macos-arm64.zip dist/chizu-macos-arm64.zip.sha256 --clobber
+          gh release edit "$TAG" --draft=false --latest
