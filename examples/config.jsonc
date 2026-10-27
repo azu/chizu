@@ -4,6 +4,11 @@
   "default": { "bundleID": "com.apple.Safari" },
   "rules": [
     {
+      "name": "Docs in Chrome",
+      "when": { "host": "docs.example.com" },
+      "destination": { "bundleID": "com.google.Chrome", "profile": "Work" }
+    },
+    {
       "name": "Team links",
       "when": { "host": "team.example.com", "pathPrefix": "/projects" },
       "destination": { "bundleID": "company.thebrowser.dia", "profile": "Team" }

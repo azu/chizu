@@ -1,84 +1,88 @@
-# リンクの振り分けの設計
+# Link routing design
 
-## このドキュメントについて
+[日本語](design.ja.md)
 
-[リンクの振り分け要件](requirements.md)と[Chizuの目的](../../product.md)を、macOSのアプリとファイル設定で実現します。
+## About this document
 
-### 対象読者
+This design implements the [link routing requirements](requirements.md) and the [Chizu product purpose](../../product.md) with a macOS app and file based configuration.
 
-Chizuの実装・変更を行う人とエージェントです。
+### Audience
 
-### 前提知識
+People and agents who implement or change Chizu.
 
-macOSのURLハンドラと、ブラウザのアプリ識別子です。
+### Prerequisites
 
-### このドキュメントで扱わないこと
+macOS URL handlers and browser bundle identifiers.
 
-個人用ルールの内容と、ブラウザ内で開くリンクの取り扱いです。
+### Not covered here
 
-## 実装方針
+The content of personal rules and links opened directly inside a browser.
 
-ChizuはHTTPとHTTPSを受け取るmacOSアプリです。リンクを受け取るたびに通常の設定ファイルを読み直し、純粋なルール評価処理で行き先を決め、対象のブラウザを明示して開きます。アプリ本体を既定先として再度呼び出さないよう、対象アプリを指定します。
+## Implementation approach
 
-正規表現の条件にはmacOSの`NSRegularExpression`を使います。[Appleの資料](https://developer.apple.com/documentation/foundation/nsregularexpression)によればICU形式に従い、[ChoosyのURL条件](https://choosy.app/help/settings/rules/urls)も同じ形式です。式をURL全体に固定して照合し、一部への一致だけではルールを適用しません。大文字・小文字は通常区別し、式内の`(?i)`で無視できます。設定の読み込み時に式を検査し、無効ならルール名とともにエラーを返します。条件の追加だけで足りるため、式言語の実行環境は導入しません。
+Chizu is a macOS app that receives HTTP and HTTPS links. It reads the regular configuration file for each link, selects a destination with a rule evaluator, and explicitly opens the target browser. Specifying that app prevents Chizu, as the default browser, from invoking itself again.
 
-Diaのプロファイル指定には、Dia自身が公開しているAppleScriptの`profile`と`tab`を使います。名前を指定したプロファイルにタブを作成し、その識別子でタブを取得し直して`focus`で選択した後、`activate`でDiaを前面に出します。タブを作るだけでは既存のタブが表示され続けるため、選択中のタブが新しいタブかも確認します。個人用のプロファイル名は本体に含めません。Diaを操作する際にはmacOSのオートメーション許可が必要です。
+The regular expression condition uses macOS `NSRegularExpression`. [Apple's documentation](https://developer.apple.com/documentation/foundation/nsregularexpression) describes its ICU syntax, which [Choosy's URL rules](https://choosy.app/help/settings/rules/urls) also use. Chizu anchors the expression to the full URL, so a partial match does not apply. Matching is case sensitive by default, and `(?i)` in the expression can ignore case. Chizu checks expressions while loading configuration and reports invalid ones with their rule names. Adding this condition avoids introducing an expression language runtime.
 
-リンク元アプリは受信したApple Eventの送信元プロセスから識別できた場合だけ条件に使います。送信元を得られない場合にもURL条件と既定先は機能します。[HammerspoonのURL受信実装](https://github.com/Hammerspoon/hammerspoon/blob/master/extensions/urlevent/liburlevent.m)もApple Eventの送信元プロセスを使っています。
+Dia profile routing uses the `profile` and `tab` objects exposed by Dia's AppleScript interface. Chizu creates a tab in the named profile, retrieves it again by ID, calls `focus` to select it, and then calls `activate` to bring Dia forward. Creating the tab alone could leave the previous tab visible, so Chizu also checks that the newly created tab is active. Personal profile names stay out of the public app. macOS Automation permission is required to control Dia.
 
-## アーキテクチャ・シーケンス図
+Chrome profile routing reads the association between visible names and profile directories from Chrome's `Local State`. If exactly one name matches and its directory exists, Chizu passes that directory with `--profile-directory` and the URL as separate arguments to Chrome's executable. [Chromium's command line switch](https://chromium.googlesource.com/chromium/src/+/lkgr/chrome/common/chrome_switches.h) treats the value as a profile directory. Chizu does not open the link if the name is missing or duplicated, the state cannot be read, or the directory is missing. It invokes Chrome's executable separately from ordinary URL opening so the argument also reaches an already running Chrome instance. The public app contains no personal profile names.
 
-受信、評価、起動の順序を示すため、次の図を使います。
+Chizu uses the sending process of the received Apple Event as a source app condition when that process can be identified. URL conditions and the default destination still work when it cannot. [Hammerspoon's URL event implementation](https://github.com/Hammerspoon/hammerspoon/blob/master/extensions/urlevent/liburlevent.m) also reads the sending process from Apple Events.
+
+## Architecture and sequence diagram
+
+The diagram shows the order of receiving, evaluating, and opening a link.
 
 ```mermaid
 sequenceDiagram
     participant Mac as macOS
     participant App as Chizu
-    participant Config as 設定ファイル
-    participant Browser as 対象ブラウザ
-    Mac->>App: Webリンクと取得可能な送信元
-    App->>Config: 読み込みと検証
-    Config-->>App: 既定先と順序付きルール
-    App->>App: 最初に一致する行き先を決定
-    App->>Browser: URLと必要なプロファイル
+    participant Config as Configuration file
+    participant Browser as Target browser
+    Mac->>App: Web link and source when available
+    App->>Config: Read and validate
+    Config-->>App: Default and ordered rules
+    App->>App: Select first matching destination
+    App->>Browser: URL and profile when specified
 ```
 
-## データモデル・ER 図
+## Data model and ER diagram
 
-JSONC設定の`version`、`default`、`rules`を読み取ります。`//`と`/* ... */`のコメント、および末尾のカンマを受け付けます。文字列内の記号はそのまま残し、コメントと末尾のカンマだけを取り除いてからJSONとして検証します。各`rule`は`name`、`when`、`destination`を持ちます。`when`はURL全体の包含・正規表現、ホストの完全一致、パスの前方一致、リンク元アプリ識別子を組み合わせられます。`destination`はアプリ識別子と省略可能なDiaプロファイル名を持ちます。関係は単純な順序付きの入れ子構造なのでER図は不要です。
+Chizu reads `version`, `default`, and `rules` from JSONC. It accepts `//` and `/* ... */` comments and trailing commas. It removes only comments and trailing commas, preserving characters inside strings, before validating the result as JSON. Each `rule` contains `name`, `when`, and `destination`. A `when` object may combine full URL containment or a regular expression, exact host matching, path prefix matching, and a source app identifier. A `destination` contains a bundle identifier and an optional visible Dia or Chrome profile name. The data is a simple ordered nested structure, so an ER diagram is unnecessary.
 
-## API・インターフェース
+## APIs and interfaces
 
-通常の設定場所は`~/.config/chizu/config.jsonc`です。シンボリックリンクにも対応し、Git管理しているファイルをそのまま参照できます。コマンドラインでは`--config`で別のファイルを指定し、`validate`で設定を検査し、`decide URL`で起動せずに結果を確認します。アプリはリンク受信時に同じ評価処理を使います。
+The usual configuration path is `~/.config/chizu/config.jsonc`. It may be a symbolic link to a Git managed file. The CLI accepts `--config` to select another file, `validate` to check configuration, and `decide URL` to preview a result without opening the link. The app uses the same evaluator when receiving links.
 
-ブラウザはアプリ識別子で指定します。Dia以外のブラウザはmacOSの`open`コマンドに対象アプリを明示してURLを渡します。Diaのプロファイル指定は、固定のAppleScriptにプロファイル名とURLを引数として渡します。設定値をスクリプトのソース文字列へ埋め込まないため、引用符などを含むURLも命令に変わりません。
+Browsers are selected by bundle identifier. Without a profile, Chizu passes the URL to macOS `open` with the target app specified. For Dia, it passes the profile name and URL as arguments to a fixed AppleScript. For Chrome, it resolves the visible name from saved profile information and passes the selected directory as a launch argument. URLs and names are not interpreted as shell text.
 
-## 外部サービスとの連携方式
+## External service integration
 
-ネットワークサービスは不要です。DiaのAppleScript定義はインストール済みアプリに含まれています。Diaが未インストール、スクリプト実行の許可がない、プロファイルが見つからない場合は失敗を返します。
+No network service is required. Dia's AppleScript interface and Chrome's saved profile information are read from the user's Mac. A missing app, missing required permission, or profile that cannot be identified causes an error.
 
-## データの取り扱い設計
+## Data handling
 
-設定ファイルはリンクを開くたびに読み、プロセス内でのみ使います。受信URLと送信元アプリは振り分けに使い、履歴として保存しません。公開するリポジトリには汎用の設定例だけを置きます。
+Chizu reads the configuration file for each link and keeps it only in the process. It uses the received URL and source app for routing without storing a history. Only a generic configuration example belongs in the public repository.
 
-## 認証認可に関する特記事項
+## Authentication and authorization
 
-アカウント認証はありません。Diaの操作には利用者がmacOSのオートメーション許可を与えます。Chizuはその許可を迂回しません。
+There is no account authentication. The user grants macOS Automation permission for Dia control; Chizu does not bypass it.
 
-## セキュリティ上の留意事項
+## Security considerations
 
-HTTPとHTTPS以外を受け付けず、設定ファイルの必須項目と行き先を検証します。外部コマンドへ渡すURL・プロファイル名は別々の引数とし、シェルとして解釈しません。
+Chizu accepts only HTTP and HTTPS URLs and validates required configuration fields and destinations. It passes URLs and profile names as separate process arguments, not shell commands.
 
-## デプロイに関する特記事項
+## Deployment notes
 
-アプリをインストールしたあと、macOSの既定ブラウザに登録する必要があります。既存の既定ブラウザ設定は切替を実行するまで保持します。
+After installing Chizu, the user sets it as the macOS default browser. The existing default browser remains until that change is made.
 
-## 検討した代替手段
+## Alternatives considered
 
-### キーボードショートカットによるDiaの切替
+### Switching Dia profiles with a keyboard shortcut
 
-既存の[Dia Router](https://github.com/jdsimcoe/dia-router)はプロファイル切替のショートカットを送ってからURLを開きます。ショートカット設定とアクセシビリティ許可、切替の待ち時間に依存するため、Diaが公開するAppleScript操作を選びます。
+[Dia Router](https://github.com/jdsimcoe/dia-router) switches profiles with keyboard shortcuts before opening a URL. That depends on shortcut settings, Accessibility permission, and the timing of the switch. Chizu uses Dia's AppleScript interface instead.
 
-## 未決事項
+## Open questions
 
-なし。
+None.

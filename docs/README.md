@@ -1,3 +1,5 @@
-# Chizu の仕様
+# Chizu specifications
 
-[Product](products/chizu/product.md)は目的と対象利用者を定めます。リンクの振り分けは[Requirements](products/chizu/features/routing/requirements.md)と[Design](products/chizu/features/routing/design.md)を、配布は[Requirements](products/chizu/features/distribution/requirements.md)と[Design](products/chizu/features/distribution/design.md)を参照してください。
+[日本語](README.ja.md)
+
+The [Product](products/chizu/product.md) defines Chizu's purpose and users. For link routing, read its [Requirements](products/chizu/features/routing/requirements.md) and [Design](products/chizu/features/routing/design.md). For distribution, read its [Requirements](products/chizu/features/distribution/requirements.md) and [Design](products/chizu/features/distribution/design.md).

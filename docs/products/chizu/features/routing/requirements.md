@@ -1,151 +1,165 @@
-# リンクの振り分け
+# Link routing
 
-## このドキュメントについて
+[日本語](requirements.ja.md)
 
-この機能は、[Chizu](../../product.md)が受け取ったWebリンクの行き先を、利用者の設定に従って決めます。
+## About this document
 
-### スコープ
+This feature chooses where to open a web link received by [Chizu](../../product.md), according to the user's configuration.
 
-HTTPとHTTPSのリンク、URL全体の文字列・正規表現・ホスト・パス・判別できたリンク元アプリによる条件、ブラウザおよびDiaプロファイルの指定、通常のファイルによる設定、結果の事前確認を扱います。
+### Scope
 
-### スコープ外
+It covers HTTP and HTTPS links; conditions on full URL text, regular expressions, host, path, and an identified source app; browser and Dia or Chrome profile destinations; file based configuration; and previewing the routing result.
 
-ブラウザ選択画面、ブラウザ内で直接開くリンクの横取り、Choosy専用API、無効なChoosyルールの移行は扱いません。
+### Out of scope
 
-## ユーザーストーリー
+It does not cover a browser selection screen, interception of links opened directly inside a browser, Choosy specific APIs, or migration of invalid Choosy rules.
 
-### 条件に一致するリンクを指定先で開く
+## User stories
 
-利用者として、リンクのURLやリンク元に応じて行き先を自動で選びたい。それによって選び直す操作をなくせます。
+### Open matching links in the configured destination
 
-**受け入れ条件:**
+As a user, I want links to be routed automatically based on their URL or source app so that I do not need to choose the destination again.
 
-Scenario: URLに指定の文字列を含む場合、指定したDiaプロファイルで開く
+**Acceptance criteria:**
 
-- Given: URL全体に含む文字列を条件とするルールと、存在するDiaプロファイルが設定されている。
-- When: 一致するHTTPまたはHTTPSのリンクをChizuで開く。
-- Then: そのリンクのタブが指定のDiaプロファイルに作られ、選択された状態でDiaが前面に出る。
+Scenario: Open a link containing configured text in a specified Dia profile
 
-Scenario: ホストとパスに一致する場合、指定したブラウザで開く
+- Given: A rule checks for text anywhere in the full URL and names an existing Dia profile.
+- When: A matching HTTP or HTTPS link is opened through Chizu.
+- Then: A tab for the link is created and selected in that Dia profile, and Dia comes to the foreground.
 
-- Given: ホストとパスの条件を持つルールが設定されている。
-- When: 両方に一致するリンクをChizuで開く。
-- Then: 指定したブラウザでそのリンクが開く。
+Scenario: Open a link matching a host and path in the specified browser
 
-Scenario: URLが正規表現に一致する場合、指定したブラウザで開く
+- Given: A rule contains both a host and a path condition.
+- When: A link matches both conditions and is opened through Chizu.
+- Then: The link opens in the specified browser.
 
-- Given: URL全体に一致する正規表現を条件とするルールが設定されている。
-- When: その式に一致するHTTPまたはHTTPSのリンクをChizuで開く。
-- Then: 指定したブラウザでそのリンクが開く。一部だけの一致ではこのルールを適用しない。
+Scenario: Open a link in a specified Chrome profile
 
-Scenario: リンク元を判別できる場合、そのアプリのルールを適用する
+- Given: The configuration names a Chrome profile as shown in Chrome, and exactly one profile has that name.
+- When: A matching link is opened through Chizu.
+- Then: The link opens in that Chrome profile.
 
-- Given: リンク元アプリを条件とするルールが設定されている。
-- When: Chizuがリンク元を判別できるWebリンクを受け取る。
-- Then: リンク元に一致するルールの行き先で開く。
+Scenario: Open a link matching a regular expression in the specified browser
 
-Scenario: リンク元を判別できない場合、URLのルールまたは既定先を使う
+- Given: A rule contains a regular expression that matches the full URL.
+- When: A matching HTTP or HTTPS link is opened through Chizu.
+- Then: The link opens in the specified browser. A partial match does not apply the rule.
 
-- Given: リンク元アプリを条件とするルールが設定されている。
-- When: Chizuがリンク元を判別できないWebリンクを受け取る。
-- Then: リンク元アプリだけに依存するルールを適用せず、次に一致するURLのルールまたは既定先を使う。
+Scenario: Apply a source app rule when the source is identified
 
-Scenario: どのルールにも一致しない場合、既定先で開く
+- Given: A rule checks the source app.
+- When: Chizu receives a web link and identifies its source app.
+- Then: It opens the link in the destination of the matching source app rule.
 
-- Given: 既定の行き先が設定されている。
-- When: 一致するルールのないWebリンクをChizuで開く。
-- Then: 設定した既定のブラウザとプロファイルで開く。
+Scenario: Use a URL rule or the default when the source app is unknown
 
-### 設定をファイルで管理する
+- Given: A rule checks the source app.
+- When: Chizu receives a web link but cannot identify its source app.
+- Then: It skips rules that depend only on the source app and uses the next matching URL rule or the default destination.
 
-利用者として、振り分けを通常のファイルで編集・同期したい。それによって変更内容を確認し、別のMacでも同じ条件を使えます。
+Scenario: Use the default destination when no rule matches
 
-**受け入れ条件:**
+- Given: A default destination is configured.
+- When: A web link matches no rule.
+- Then: The link opens in the configured default browser and profile.
 
-Scenario: コメント付きの設定を変更した場合、次のリンクから新しい内容を使う
+### Manage configuration as a file
 
-- Given: Chizuが読み取れるコメント付きJSONの設定ファイルがある。
-- When: 利用者がそのファイルを編集し、次のリンクを開く。
-- Then: Chizuはコメントを無視し、編集後のルールに従って行き先を決める。
+As a user, I want to edit and sync routing in a regular file so that I can inspect changes and use the same conditions on another Mac.
 
-Scenario: ルールが重なる場合、上に書いたルールを使う
+**Acceptance criteria:**
 
-- Given: 同じURLに一致するルールが複数ある。
-- When: そのURLをChizuで開く。
-- Then: 設定ファイルで先に書いたルールの行き先で開く。
+Scenario: Apply edited configuration to the next link
 
-Scenario: 設定が壊れている場合、誤った行き先には開かない
+- Given: Chizu can read a JSON configuration file containing comments.
+- When: The user edits it and opens another link.
+- Then: Chizu ignores the comments and routes the link according to the edited rules.
 
-- Given: 設定ファイルが存在しない、読めない、または無効である。
-- When: Chizuでリンクを開く。
-- Then: リンクを他のブラウザへ送らず、設定の問題を知らせる。
+Scenario: Use the first matching rule when rules overlap
 
-Scenario: 正規表現が無効な場合、誤った行き先には開かない
+- Given: Multiple rules match the same URL.
+- When: That URL is opened through Chizu.
+- Then: Chizu uses the destination of the first matching rule in the file.
 
-- Given: 設定ファイルのルールに無効な正規表現がある。
-- When: 利用者が設定を検査する、またはChizuでリンクを開く。
-- Then: そのルール名と正規表現の問題を知らせ、リンクをブラウザへ送らない。
+Scenario: Do not open a link to an unintended destination when configuration is invalid
 
-Scenario: 指定のDiaプロファイルがない場合、別プロファイルには開かない
+- Given: The configuration file is missing, unreadable, or invalid.
+- When: A link is opened through Chizu.
+- Then: Chizu does not send it to another browser and reports the configuration problem.
 
-- Given: ルールが存在しないDiaプロファイルを指定している。
-- When: そのルールに一致するリンクを開く。
-- Then: 他のプロファイルには開かず、見つからないプロファイル名を知らせる。
+Scenario: Do not open a link when a regular expression is invalid
+
+- Given: A rule contains an invalid regular expression.
+- When: The user validates the configuration or opens a link through Chizu.
+- Then: Chizu reports the rule name and regular expression problem without sending the link to a browser.
+
+Scenario: Do not use another Dia profile when the specified one is missing
+
+- Given: A rule names a Dia profile that does not exist.
+- When: A matching link is opened.
+- Then: Chizu does not open it in another profile and reports the missing profile name.
+
+Scenario: Do not use another Chrome profile when the specified one cannot be identified
+
+- Given: The configured Chrome profile name is missing or belongs to multiple profiles.
+- When: A matching link is opened.
+- Then: Chizu does not send the link to Chrome and reports the name and reason it cannot identify the profile.
 
 ## KPI
 
-### 設定した行き先への到達
+### Reaching the configured destination
 
-- **現状値:** 新規機能のため未計測。
-- **目標値:** 受け入れ条件の正常系がすべて成功する。
-- **計測方法:** 設定とテストURLを固定して、実際に開いたブラウザ・プロファイルを確認する。
-- **計測期間:** 各リリースの検証時。
+- **Current value:** Not measured because this is a new feature.
+- **Target:** All normal acceptance scenarios pass.
+- **Measurement:** Fix the configuration and test URLs, then inspect the browser and profile where each link actually opens.
+- **Period:** During verification for each release.
 
-## 機能要件
+## Functional requirements
 
-### ルール評価
+### Rule evaluation
 
-**概要:** ルールを記述順に調べ、最初に一致した行き先を選ぶ。複数の条件を持つルールはすべて満たすときだけ一致する。
+**Summary:** Evaluate rules in file order and select the first matching destination. A rule with multiple conditions matches only when all of them are met.
 
-**入力:** Webリンク、判別できたリンク元アプリ、設定されたルールと既定先。
+**Input:** A web link, an identified source app when available, configured rules, and the default destination.
 
-**出力:** 開くブラウザ、必要ならプロファイル、または理由を示したエラー。
+**Output:** A browser and optional profile to open, or an error with a reason.
 
-#### 適用する条件
+#### Applicable conditions
 
-##### URLとアプリ
+##### URL and app
 
-URL全体の文字列包含は大文字と小文字を区別しません。URLの正規表現はURL全体に一致した場合だけ適用し、通常は大文字と小文字を区別します。ホストの一致は大文字と小文字を区別せず、パスの前方一致は区別します。リンク元アプリの条件は、そのアプリを判別できたときだけ一致します。HTTPとHTTPS以外のURLは開きません。
+Text containment in the full URL ignores letter case. A URL regular expression applies only when it matches the full URL and is case sensitive by default. Host matching ignores letter case; path prefix matching respects it. A source app condition matches only when that app can be identified. Chizu does not open URL schemes other than HTTP and HTTPS.
 
-#### 例外ケースでの振る舞い
+#### Behavior in exceptional cases
 
-##### 行き先が見つからない場合
+##### Destination cannot be found
 
-指定されたブラウザやプロファイルが存在しないときは、別の行き先へ黙って変更せず、エラーを示します。
+When the configured browser or profile does not exist, Chizu reports an error instead of silently changing the destination. Chrome profiles are specified by the name shown in Chrome; duplicate names also cause an error.
 
-## データ要件
+## Data requirements
 
-### 必要なデータ
+### Required data
 
-- **設定:** 既定の行き先、順序を持つルール、URLとリンク元の条件、行き先のブラウザとプロファイル。
-- **リンク:** 開くために受け取るURL。リンク元アプリを判別できた場合はその識別子。
+- **Configuration:** The default destination, ordered rules, URL and source app conditions, and destination browsers and profiles.
+- **Link:** The URL to open and, when identified, the source app identifier.
 
-### データ間の関係
+### Data relationships
 
-各ルールは条件と一つの行き先を持ちます。どのルールにも一致しない場合に一つの既定先を使います。
+Each rule has conditions and one destination. One default destination applies when no rule matches.
 
-### 個人情報
+### Personal information
 
-設定したURLの条件、プロファイル名、リンク元アプリの組み合わせは利用者や勤務先を推測できる場合があります。個人用設定を公開する本体に含めません。受け取ったURLの履歴は保存しません。
+Configured URL conditions, profile names, and source apps may together reveal the user or workplace. Personal configuration is not included in the public app. Chizu does not retain a history of received URLs.
 
-## 依存する外部サービス
+## External service dependencies
 
-なし。リンクの送信先となるブラウザは利用者が用意します。
+None. The user provides the browsers that receive links.
 
-## セキュリティ上の留意事項
+## Security considerations
 
-受け取ったURLを勝手に書き換えず、設定した行き先以外へ送らないことが必要です。設定の誤りや必要な権限の不足は利用者に知らせます。
+Chizu must not rewrite a received URL or send it to a destination other than the one configured. It reports configuration errors and missing permissions to the user.
 
-## 未決事項
+## Open questions
 
-なし。
+None.

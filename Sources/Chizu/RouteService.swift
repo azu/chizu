@@ -5,6 +5,7 @@ import Foundation
 enum RouteServiceError: Error, LocalizedError {
     case configuration(URL, String)
     case applicationNotFound(String)
+    case applicationExecutableNotFound(String)
     case commandFailed(String)
     case diaOpenedWrongProfile(expected: String, actual: String)
 
@@ -12,6 +13,7 @@ enum RouteServiceError: Error, LocalizedError {
         switch self {
         case let .configuration(fileURL, reason): "Could not read configuration at \(fileURL.path): \(reason)"
         case let .applicationNotFound(bundleID): "Application not found: \(bundleID)"
+        case let .applicationExecutableNotFound(bundleID): "Application executable not found: \(bundleID)"
         case let .commandFailed(message): "Could not open link: \(message)"
         case let .diaOpenedWrongProfile(expected, actual):
             "Dia opened profile '\(actual)' instead of '\(expected)'"
@@ -43,7 +45,13 @@ enum RouteService {
     static func open(_ url: URL, decision: RoutingDecision) throws {
         let destination = decision.destination
         if let profile = destination.profile {
-            try openInDia(url, profile: profile)
+            if destination.bundleID == Configuration.diaBundleID {
+                try openInDia(url, profile: profile)
+            } else if destination.bundleID == Configuration.chromeBundleID {
+                try openInChrome(url, profile: profile)
+            } else {
+                throw RouteServiceError.commandFailed("Unsupported browser profile: \(destination.bundleID)")
+            }
             return
         }
 
@@ -69,6 +77,37 @@ enum RouteService {
         let actualProfile = result
         guard actualProfile == profile else {
             throw RouteServiceError.diaOpenedWrongProfile(expected: profile, actual: actualProfile)
+        }
+    }
+
+    private static func openInChrome(_ url: URL, profile: String) throws {
+        guard let applicationURL = NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: Configuration.chromeBundleID
+        ) else {
+            throw RouteServiceError.applicationNotFound(Configuration.chromeBundleID)
+        }
+        let userDataDirectory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Google/Chrome")
+        let directory = try ChromeProfileResolver.directory(
+            named: profile, userDataDirectory: userDataDirectory
+        )
+        guard let executableURL = Bundle(url: applicationURL)?.executableURL else {
+            throw RouteServiceError.applicationExecutableNotFound(Configuration.chromeBundleID)
+        }
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = ["--profile-directory=\(directory)", url.absoluteString]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        process.terminationHandler = { process in
+            if process.terminationStatus != 0 {
+                NSLog("Chizu: Chrome exited with status %d", process.terminationStatus)
+            }
+        }
+        do {
+            try process.run()
+        } catch {
+            throw RouteServiceError.commandFailed(error.localizedDescription)
         }
     }
 

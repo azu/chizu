@@ -1,59 +1,61 @@
 # Chizu
 
-## 概要
+[日本語](product.ja.md)
 
-Chizuは、macOSで開くWebリンクを、利用者が指定したブラウザとプロファイルへ自動で振り分けるアプリです。振り分けの条件を通常のファイルとして管理でき、ブラウザを選ぶ画面を挟まずにリンクを開きます。
+## Overview
 
-## 背景と解決する課題
+Chizu is a macOS app that automatically routes web links to a browser and profile chosen by the user. Users manage routing conditions in a regular file and open links without a browser selection screen.
 
-### 背景
+## Background and problem
 
-macOSは既定のブラウザへリンクを渡せます。既存のChoosyもリンクを条件に応じて振り分けますが、利用者の現在の設定ではDiaのプロファイルを指定できません。ChoosyにはURL文字列やリンク元アプリを条件にしたルールがあります。[AppleのURLハンドラ資料](https://developer.apple.com/documentation/coreservices/1447760-lssetdefaulthandlerforurlscheme)、[Choosyのルール資料](https://choosy.app/help/settings/rules)を参照します。
+### Background
 
-### 解決する課題
+macOS can send links to a default browser. Choosy also routes links according to conditions, but the user's existing setup could not select a Dia profile. Choosy supports rules based on URL text and the source app. See [Apple's URL handler documentation](https://developer.apple.com/documentation/coreservices/1447760-lssetdefaulthandlerforurlscheme) and [Choosy's rules documentation](https://choosy.app/help/settings/rules).
 
-仕事と個人のリンクを手作業でプロファイルへ振り分けると、意図しないアカウントで開いたり、開き直したりします。画面で作った設定は差分の確認やファイル同期もしにくいため、利用者が内容を読める設定ファイルを正本にします。
+### Problem to solve
 
-## ターゲットエンドユーザー
+Manually separating work and personal links by profile can open a link under the wrong account and require reopening it. Settings created only through a UI are also harder to compare and sync as files. A readable configuration file holds the user's routing settings.
 
-### 複数のブラウザとプロファイルを使うmacOS利用者
+## Target users
 
-- **特性:** リンクの行き先をURLやリンク元によって変え、設定をファイルで管理する。
-- **抱える課題:** リンクを開くたびにブラウザやプロファイルを選び直したくない。
-- **利用文脈:** 他のアプリからWebリンクを開くとき、または設定を別のMacへ同期するとき。
+### macOS users with multiple browsers and profiles
 
-## 提供価値
+- **Characteristics:** They choose destinations based on URLs or source apps and manage configuration in files.
+- **Problem:** They do not want to choose a browser or profile each time they open a link.
+- **Usage:** They open web links from other apps or sync their configuration to another Mac.
 
-### 予測できる自動振り分け
+## Value provided
 
-- **対象:** 複数のブラウザとプロファイルを使うmacOS利用者。
-- **内容:** 明示した条件に一致するリンクを指定の行き先へ開き、残りは既定の行き先へ開く。
-- **提供理由:** 開くたびに選ぶ操作をなくし、意図したブラウザ環境へ入れるため。
+### Predictable automatic routing
 
-### 追跡できる設定
+- **For:** macOS users with multiple browsers and profiles.
+- **What:** Open matching links in the specified destination and other links in the configured default destination.
+- **Why:** Remove repeated choices and reach the intended browser context.
 
-- **対象:** 設定をGitで管理・同期する利用者。
-- **内容:** 振り分け条件を通常のファイルとして編集、確認、共有できる。
-- **提供理由:** アプリ内だけの設定に依存せず、変更履歴を残せるため。
+### Traceable configuration
 
-## 成功の定義
+- **For:** Users who manage and sync configuration with Git.
+- **What:** Edit, inspect, and share routing conditions as a regular file.
+- **Why:** Preserve a change history without relying on settings stored only inside the app.
 
-利用者が自分の設定ファイルから、どのリンクがどこで開くかを確認でき、普段のリンク操作で選択画面を使わずに期待したブラウザとプロファイルへ到達できることです。
+## Definition of success
 
-## プロダクト開発を進める上での指針
+Users can inspect their configuration file to see where links will open and reach the expected browser and profile during normal link opening without a selection screen.
 
-振り分けの結果を利用者が事前に確かめられることを優先します。プロファイルや設定が見つからないときは、別のプロファイルへ黙って送らず、失敗を知らせます。公開する本体と個人の振り分け条件を分けます。
+## Product principles
 
-## SLA・SLI・SLO
+Prioritize letting users check routing results before opening links. If a profile or configuration is missing, report the failure instead of silently selecting another profile. Keep the public app separate from personal routing conditions.
+
+## SLA, SLI, and SLO
 
 ### SLA
 
-個人利用のローカルアプリなので、対外的な稼働保証は設けません。
+Chizu is a local app for personal use, so it makes no service availability commitment to others.
 
-### SLI・SLO
+### SLI and SLO
 
-運用上の数値目標は設けません。実装時には、正常・異常・境界の受け入れ条件で振り分け結果を検証します。
+No numerical operating target is set. Routing is checked against normal, error, and boundary acceptance conditions during implementation.
 
-## 未決事項
+## Open questions
 
-なし。
+None.

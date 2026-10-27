@@ -40,12 +40,55 @@ import Testing
     #expect(throws: ChizuError.self) { try bad.validate() }
     let profileInSafari = Configuration(default: Destination(bundleID: "com.apple.Safari", profile: "Home"), rules: [])
     #expect(throws: ChizuError.self) { try profileInSafari.validate() }
+    let profileInChrome = Configuration(default: Destination(bundleID: Configuration.chromeBundleID, profile: "Work"), rules: [])
+    try profileInChrome.validate()
     let emptyRule = Configuration(default: Destination(bundleID: "com.apple.Safari"),
                                   rules: [Rule(name: "empty", when: Match(), destination: Destination(bundleID: "com.apple.Safari"))])
     #expect(throws: ChizuError.self) { try emptyRule.validate() }
     #expect(throws: ChizuError.self) {
         try Configuration(default: Destination(bundleID: "com.apple.Safari"), rules: [])
             .decide(#require(URL(string: "file:///tmp/test")))
+    }
+}
+
+@Test func resolvesChromeProfileByVisibleNameWithoutFallback() throws {
+    let userData = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: userData.appendingPathComponent("Default"), withIntermediateDirectories: true)
+    try FileManager.default.createDirectory(at: userData.appendingPathComponent("Profile 4"), withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: userData) }
+    let localState = userData.appendingPathComponent("Local State")
+    let profiles: [String: Any] = [
+        "profile": ["info_cache": [
+            "Default": ["name": "Personal"],
+            "Profile 4": ["name": "Work"],
+        ]],
+    ]
+    try JSONSerialization.data(withJSONObject: profiles).write(to: localState)
+
+    #expect(try ChromeProfileResolver.directory(named: "Work", userDataDirectory: userData) == "Profile 4")
+    #expect(throws: ChromeProfileError.profileNotFound("work")) {
+        try ChromeProfileResolver.directory(named: "work", userDataDirectory: userData)
+    }
+
+    let duplicate: [String: Any] = [
+        "profile": ["info_cache": [
+            "Default": ["name": "Work"],
+            "Profile 4": ["name": "Work"],
+        ]],
+    ]
+    try JSONSerialization.data(withJSONObject: duplicate).write(to: localState)
+    #expect(throws: ChromeProfileError.ambiguousProfile("Work")) {
+        try ChromeProfileResolver.directory(named: "Work", userDataDirectory: userData)
+    }
+
+    try FileManager.default.removeItem(at: userData.appendingPathComponent("Profile 4"))
+    try JSONSerialization.data(withJSONObject: profiles).write(to: localState)
+    #expect(throws: ChromeProfileError.profileDirectoryMissing("Work")) {
+        try ChromeProfileResolver.directory(named: "Work", userDataDirectory: userData)
+    }
+    try Data("{".utf8).write(to: localState)
+    #expect(throws: ChromeProfileError.unreadableProfiles) {
+        try ChromeProfileResolver.directory(named: "Work", userDataDirectory: userData)
     }
 }
 

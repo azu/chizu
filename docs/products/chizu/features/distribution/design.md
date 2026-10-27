@@ -1,83 +1,85 @@
-# Chizuのリリースの設計
+# Chizu release design
 
-## このドキュメントについて
+[日本語](design.ja.md)
 
-[リリースの要件](requirements.md)と[Chizuの目的](../../product.md)に従い、版更新から配布物の公開までの処理を定めます。
+## About this document
 
-### 対象読者
+This design defines the process from a version change to artifact publication under the [release requirements](requirements.md) and [Chizu product purpose](../../product.md).
 
-Chizuの実装・リリースを行う人とエージェントです。
+### Audience
 
-### 前提知識
+People and agents who implement or release Chizu.
 
-macOSのアプリ署名とGitHub Actionsの基本的な操作です。
+### Prerequisites
 
-### このドキュメントで扱わないこと
+Basic familiarity with macOS app signing and GitHub Actions.
 
-個人用の振り分け条件と、アプリ内更新の実装です。
+### Not covered here
 
-## 実装方針
+Personal routing rules and implementation of in-app updates.
 
-版の正本を`VERSION`に置きます。手動起動するワークフローが版を上げたPRを作り、そのPRがmainへ取り込まれると、対応するタグを作成してリリースを開始します。既存タグを指定して再実行する経路も用意します。タグ、`VERSION`、アプリ内の版を同じ値にします。
+## Implementation approach
 
-配布用アプリはApple SiliconのmacOS上で作ります。固定した証明書の公開指紋をリポジトリに置き、秘密鍵とパスワードをCIのSecretsから渡します。証明書の指紋が異なると署名せずに失敗します。署名済みアプリをZIPにし、展開後にも署名と版を検査してからSHA-256を計算します。[GitHubのランナー一覧](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)で`macos-26`がApple Siliconと確認できます。
+`VERSION` is the source of the release version. A manually started workflow opens a PR that bumps it. When that PR merges into `main`, the release workflow creates the matching tag and starts the release. An existing tag can also be selected for a retry. The tag, `VERSION`, and app bundle version use the same value.
 
-リリースは下書きを作り、ZIPとチェックサムのアップロードが成功してから公開します。版更新PRの本文を公開文に使い、タグから再実行した場合も対応するPRを探します。[GitHubのワークフロー起動仕様](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)では、`GITHUB_TOKEN`で発生した通常のイベントは別ワークフローを起動しないため、PRが人によってマージされたイベントをリリースの主経路にします。
+The distribution app is built on Apple Silicon macOS. The repository contains the fixed certificate's public fingerprint, while CI Secrets provide its private key and password. A fingerprint mismatch fails before signing. The signed app is zipped; after extraction, the signature and version are checked again before calculating SHA-256. The [GitHub runner list](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job) identifies `macos-26` as an Apple Silicon runner.
 
-## アーキテクチャ・シーケンス図
+The workflow creates a draft release and publishes it only after the ZIP and checksum upload succeeds. The version change PR body becomes the release notes; a retry from a tag looks up the corresponding PR. According to [GitHub's workflow triggering rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow), ordinary events caused by `GITHUB_TOKEN` do not start another workflow, so a human merging the PR is the primary release trigger.
 
-版の更新と配布の責務が分かれるため、処理を図示します。
+## Architecture and sequence diagram
+
+The diagram separates the version change from artifact publication.
 
 ```mermaid
 sequenceDiagram
-    participant Maintainer as 管理者
-    participant PR as 版更新PR
-    participant CI as リリースCI
+    participant Maintainer
+    participant PR as Version change PR
+    participant CI as Release CI
     participant Release as GitHub Release
-    Maintainer->>PR: 版更新を起動し内容を確認
-    Maintainer->>PR: mainへ取り込む
-    PR->>CI: マージイベント
-    CI->>CI: タグ・テスト・署名・ZIP検査
-    CI->>Release: 下書きにZIPとSHA-256を添付
-    CI->>Release: 公開
+    Maintainer->>PR: Start version change and review it
+    Maintainer->>PR: Merge into main
+    PR->>CI: Merge event
+    CI->>CI: Tag, test, sign, and check ZIP
+    CI->>Release: Attach ZIP and SHA-256 to draft
+    CI->>Release: Publish
 ```
 
-## データモデル・ER 図
+## Data model and ER diagram
 
-`VERSION`は`MAJOR.MINOR.PATCH`です。タグは先頭に`v`を付けます。公開する`config/release-signing.json`は証明書のSHA-256だけを持ちます。秘密鍵、PKCS#12、パスワードはGit管理外の`.release-signing/`とCI Secretsに置きます。単純な一対一の関係なのでER図は不要です。
+`VERSION` uses `MAJOR.MINOR.PATCH`; a tag prefixes it with `v`. The public `config/release-signing.json` contains only the certificate's SHA-256. The private key, PKCS#12 file, and password stay in Git ignored `.release-signing/` and CI Secrets. These have a simple one-to-one relationship, so an ER diagram is unnecessary.
 
-## API・インターフェース
+## APIs and interfaces
 
-管理者はGitHub Actionsの「Create Release PR」を起動し、`patch`、`minor`、`major`を選びます。PRのマージでリリースが始まります。失敗時は既存タグを指定した「Release」の手動再実行を使えます。
+The maintainer starts **Create Release PR** in GitHub Actions and chooses `patch`, `minor`, or `major`. Merging the PR starts the release. After a failure, the maintainer can manually rerun **Release** with an existing tag.
 
-ローカルでは`bash scripts/version.sh`で版を確認し、`bash scripts/package-release.sh`で同じ署名のZIPを作ります。証明書の初回準備には`bash scripts/setup-release-signing.sh`を使います。ローカルの署名検証には`bash scripts/trust-release-certificate.sh`で証明書をコード署名用途だけに信頼登録します。
+Locally, `bash scripts/version.sh` reads the version and `bash scripts/package-release.sh` builds a ZIP with the same signing identity. `bash scripts/setup-release-signing.sh` creates the initial certificate. To verify signing locally, `bash scripts/trust-release-certificate.sh` trusts that certificate for code signing only.
 
-## 外部サービスとの連携方式
+## External service integration
 
-GitHub Actionsは版更新PRとリリースの二つのワークフローを実行します。GitHub Releasesへの書き込みには、そのジョブだけに`contents: write`を与えます。署名情報は`CODE_SIGN_P12_BASE64`と`CODE_SIGN_P12_PASSWORD`をSecretsから読み、出力やログに書きません。
+GitHub Actions runs separate workflows for the version change PR and the release. Only jobs that create the PR or tag, or publish the release, receive the write permissions they need. The build reads `CODE_SIGN_P12_BASE64` and `CODE_SIGN_P12_PASSWORD` from Secrets without printing them to output or logs.
 
-## データの取り扱い設計
+## Data handling
 
-公開証明書の指紋はGitで履歴を残します。秘密情報はローカルではGit無視のディレクトリに保存し、CIでは一時的なキーチェーンへ読み込みます。CIの終了時に一時ファイルと信頼設定を削除します。配布物には個人設定を含めません。
+The public certificate fingerprint is kept in Git history. Private information is stored locally in an ignored directory and in a temporary CI keychain. Temporary files and trust settings are removed after CI completes. Artifacts contain no personal configuration.
 
-## 認証認可に関する特記事項
+## Authentication and authorization
 
-GitHubのトークン権限はジョブごとに最小限を指定します。署名の秘密情報はリリースを作るジョブでだけ使います。
+GitHub token permissions are limited by job. Only the job that builds the release uses private signing information.
 
-## セキュリティ上の留意事項
+## Security considerations
 
-証明書の指紋、署名済みアプリの固定した識別要件、展開したZIPの署名を確認します。公開済みリリースを再実行で自動上書きしません。
+Check the certificate fingerprint, the signed app's fixed identity requirement, and the signature of the extracted ZIP. A retry does not automatically overwrite an already published release.
 
-## デプロイに関する特記事項
+## Deployment notes
 
-初回リリース前に署名の秘密情報をGitHub Secretsへ登録します。すでに別の署名で使っているChizuから配布版へ切り替える場合、macOSのAutomation許可は署名の変更により再確認が必要になる可能性があります。
+Before the first release, add private signing information to GitHub Secrets. When switching an existing Chizu install signed with another certificate to the distribution build, macOS may require granting Dia Automation permission again because the signature changed.
 
-## 検討した代替手段
+## Alternatives considered
 
-### 版ごとに署名を作る
+### Create a new signing certificate for every version
 
-新しい証明書を毎回作ると、同じアプリの更新としてmacOSが扱うための署名識別が変わります。固定した証明書を使います。
+Doing so changes the signing identity macOS uses to recognize the same app across updates. Chizu keeps a fixed certificate instead.
 
-## 未決事項
+## Open questions
 
-なし。
+None.

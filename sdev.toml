@@ -1,2 +1,2 @@
-language = "ja"
-translations = []
+language = "en"
+translations = ["ja"]

@@ -1,101 +1,103 @@
-# Chizuのリリース
+# Chizu releases
 
-## このドキュメントについて
+[日本語](requirements.ja.md)
 
-[Chizu](../../product.md)の利用者が、版を識別できるアプリをダウンロードして使えるようにします。
+## About this document
 
-### スコープ
+This feature lets users of [Chizu](../../product.md) download and use an app whose version they can identify.
 
-版の更新、リリース前の検証、署名済みApple SiliconアプリのZIPとチェックサムの公開を扱います。
+### Scope
 
-### スコープ外
+It covers version changes, pre-release verification, and publication of a ZIP containing a signed Apple Silicon app with a checksum.
 
-アプリ内の自動更新、Intel向け配布、Appleの公証は、この配布手順では扱いません。
+### Out of scope
 
-## ユーザーストーリー
+This distribution process does not cover in-app automatic updates, Intel builds, or Apple notarization.
 
-### 確認した版のアプリを入手する
+## User stories
 
-利用者として、版と署名を確認できるアプリを入手したい。それによって意図したChizuを使えます。
+### Obtain a verified version of the app
 
-**受け入れ条件:**
+As a user, I want to obtain an app whose version and signature I can check so that I use the intended Chizu build.
 
-Scenario: リリースが成功した場合、同じ版のアプリとチェックサムを公開する
+**Acceptance criteria:**
 
-- Given: 版の更新が取り込まれ、署名に必要な情報が用意されている。
-- When: リリース処理が完了する。
-- Then: 版と一致するアプリを含むZIPと、そのZIPのSHA-256が同じリリースに公開される。
+Scenario: Publish an app and checksum for the same version after a successful release
 
-Scenario: 署名情報が欠ける場合、アプリを公開しない
+- Given: A version change has been merged and the required signing information is available.
+- When: The release process completes.
+- Then: The same release contains a ZIP with an app matching that version and the ZIP's SHA-256 checksum.
 
-- Given: 署名に必要な情報がないか、公開済みの証明書情報と一致しない。
-- When: リリース処理を実行する。
-- Then: 公開前に失敗し、署名が変わったアプリを公開しない。
+Scenario: Do not publish when signing information is missing
 
-Scenario: 版とタグが異なる場合、アプリを公開しない
+- Given: Required signing information is missing or differs from the published certificate information.
+- When: The release process runs.
+- Then: It fails before publication and does not publish an app with a changed signing identity.
 
-- Given: リリース対象のタグとアプリの版が異なる。
-- When: リリース処理を実行する。
-- Then: 公開前に失敗し、異なる版のアプリを公開しない。
+Scenario: Do not publish when the version and tag differ
+
+- Given: The release tag differs from the app's version.
+- When: The release process runs.
+- Then: It fails before publication and does not publish an app with a different version.
 
 ## KPI
 
-### 配布物の一致
+### Distribution artifact consistency
 
-- **現状値:** 新規機能のため未計測。
-- **目標値:** 各リリースでZIP内の版・署名とリリースの版が一致する。
-- **計測方法:** リリースごとに版、署名、チェックサムを検査する。
-- **計測期間:** 各リリース時。
+- **Current value:** Not measured because this is a new feature.
+- **Target:** The version and signature inside the ZIP match the release version for every release.
+- **Measurement:** Check version, signature, and checksum for each release.
+- **Period:** At every release.
 
-## 機能要件
+## Functional requirements
 
-### リリースの生成
+### Generate a release
 
-**概要:** 版の更新を確認してからアプリを作り、同じ署名情報で署名した配布物を公開する。
+**Summary:** Check the version change, build the app, and publish an artifact signed with the same signing information.
 
-**入力:** 版の更新、アプリのソース、固定した署名情報。
+**Input:** The version change, app source, and fixed signing information.
 
-**出力:** 版の付いたリリース、アプリのZIP、SHA-256チェックサム、または失敗理由。
+**Output:** A versioned release, app ZIP, SHA-256 checksum, or a reason for failure.
 
-#### 適用する条件
+#### Applicable conditions
 
-##### 版と署名
+##### Version and signature
 
-リリースはソースの版とタグが一致する場合だけ行います。署名の識別情報を固定し、通常の版更新で変更しません。
+Release only when the source version matches the tag. Keep the signing identity fixed across ordinary version changes.
 
-#### 例外ケースでの振る舞い
+#### Behavior in exceptional cases
 
-##### 検証または公開の失敗
+##### Verification or publication failure
 
-テスト、署名、ZIPの再検査のいずれかが失敗した場合はリリースを公開しません。既存の公開済みリリースを黙って上書きしません。
+Do not publish when tests, signing, or rechecking the ZIP fails. Do not silently overwrite an already published release.
 
-## データ要件
+## Data requirements
 
-### 必要なデータ
+### Required data
 
-- **版:** リリースとアプリを対応付ける番号。
-- **署名情報:** 配布したアプリの署名を一貫させるための公開情報と秘密情報。
-- **配布物:** アプリのZIPと、その内容を検査するチェックサム。
+- **Version:** A number that relates a release to the app.
+- **Signing information:** Public and private information that keeps distributed app signatures consistent.
+- **Artifact:** The app ZIP and a checksum used to check its contents.
 
-### データ間の関係
+### Data relationships
 
-一つの版に一つのリリースを対応させます。そのリリースに同じ版のZIPとチェックサムを添付します。
+One release corresponds to one version. That release includes a ZIP and checksum for the same version.
 
-### 個人情報
+### Personal information
 
-個人用のURLルールとプロファイル名は配布物に含めません。署名用の秘密情報は公開しません。
+Personal URL rules and profile names are not included in the artifact. Private signing information is not published.
 
-## 依存する外部サービス
+## External service dependencies
 
-- **GitHub ActionsとGitHub Releases**
-  - **関連するユーザーストーリー:** 確認した版のアプリを入手する。
-  - **依存する理由:** ソースの版更新、検証、配布物の公開を一つのリポジトリで扱うため。
-  - **契約・利用上の判断:** 利用するリポジトリのActions実行枠と公開設定に従う。
+- **GitHub Actions and GitHub Releases**
+  - **Related user story:** Obtain a verified version of the app.
+  - **Reason for dependency:** Handle the source version change, verification, and artifact publication in one repository.
+  - **Contract and usage decision:** Follow the repository's Actions execution allowance and visibility settings.
 
-## セキュリティ上の留意事項
+## Security considerations
 
-署名用の秘密情報はリポジトリやログに含めません。公開前に証明書とアプリの署名を検査します。
+Do not include private signing information in the repository or logs. Check the certificate and app signature before publication.
 
-## 未決事項
+## Open questions
 
-なし。
+None.

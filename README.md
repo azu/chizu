@@ -1,6 +1,6 @@
 # Chizu
 
-Chizu is a small macOS default browser that sends links to a configured browser and, for Dia, a named profile. It reads rules from a JSONC file on every link. There is no browser picker or settings window.
+Chizu is a small macOS default browser that sends links to a configured browser and, for Dia or Google Chrome, a named profile. It reads rules from a JSONC file on every link. There is no browser picker or settings window.
 
 ## Build and install
 
@@ -47,11 +47,11 @@ The JSON object has a `version`, one `default` destination, and an ordered `rule
 | `pathPrefix` | Start of the path, respecting letter case |
 | `sourceBundleID` | Bundle ID of the sending app, when macOS provides one |
 
-A destination needs `bundleID`. A `profile` can be added only for Dia (`company.thebrowser.dia`) and must match a profile name visible in Dia's AppleScript interface. The source app may be unavailable for some links; those rules then do not match. Direct links opened inside a browser do not normally pass through the macOS default browser. Chizu reads the file again for each new link, so editing does not require a restart.
+A destination needs `bundleID`. A `profile` can be added for Dia (`company.thebrowser.dia`) or Google Chrome (`com.google.Chrome`). Use the profile name shown in the browser, with matching letter case. For Chrome, Chizu finds that name in Chrome's local profile list and passes its directory to Chrome; a missing or duplicate name fails instead of choosing another profile. The source app may be unavailable for some links; those rules then do not match. Direct links opened inside a browser do not normally pass through the macOS default browser. Chizu reads the file again for each new link, so editing does not require a restart.
 
 The configuration uses JSONC: `//` and `/* ... */` comments and trailing commas are accepted. Strings and keys still use JSON double quotes. An invalid regular expression fails validation instead of silently skipping a rule. A pattern such as `.*\\.pdf` matches a URL ending in `.pdf`; use `(?i)` at the start for case-insensitive matching. Chizu accepts trailing commas as an extension permitted by the [JSONC specification](https://jsonc.org/).
 
-The path can be overridden for CLI checks with `--config FILE`. A missing or invalid config, missing browser, or missing Dia profile is reported as an error. Chizu never silently falls back to another browser or profile.
+The path can be overridden for CLI checks with `--config FILE`. A missing or invalid config, missing browser, or missing profile is reported as an error. Chizu never silently falls back to another browser or profile.
 
 ## Development
 
