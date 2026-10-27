@@ -1,4 +1,4 @@
-# Chizu
+# chīzu 🧀
 
 Chizu is a small macOS default browser that sends links to a configured browser and, for Dia or Google Chrome, a named profile. It reads rules from a JSONC file on every link. There is no browser picker or settings window.
 
@@ -80,3 +80,5 @@ The ZIP is signed with the fixed Chizu release certificate. The current pipeline
 ## License
 
 Chizu is available under the [MIT License](LICENSE).
+
+Inspired by [Choosy](https://choosy.app/).
