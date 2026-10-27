@@ -20,7 +20,7 @@ Personal routing rules and implementation of in-app updates.
 
 ## Implementation approach
 
-`VERSION` is the source of the release version. A manually started workflow opens a PR that bumps it. When that PR merges into `main`, the release workflow creates the matching tag and starts the release. An existing tag can also be selected for a retry. The tag, `VERSION`, and app bundle version use the same value.
+`VERSION` is the source of the release version. A manually started workflow opens a PR that bumps it. When that PR merges into `main`, the release workflow creates the matching tag and starts the release. For the first release, the maintainer may push a matching tag on `main` directly. An existing tag can also be selected for a retry. The tag, `VERSION`, and app bundle version use the same value.
 
 The distribution app is built on Apple Silicon macOS. The repository contains the fixed certificate's public fingerprint, while CI Secrets provide its private key and password. A fingerprint mismatch fails before signing. The signed app is zipped; after extraction, the signature and version are checked again before calculating SHA-256. The [GitHub runner list](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job) identifies `macos-26` as an Apple Silicon runner.
 
@@ -50,7 +50,7 @@ sequenceDiagram
 
 ## APIs and interfaces
 
-The maintainer starts **Create Release PR** in GitHub Actions and chooses `patch`, `minor`, or `major`. Merging the PR starts the release. After a failure, the maintainer can manually rerun **Release** with an existing tag.
+The maintainer starts **Create Release PR** in GitHub Actions and chooses `patch`, `minor`, or `major`. Merging the PR starts the release. For the first release, pushing the matching tag starts **Release** directly. After a failure, the maintainer can manually rerun **Release** with an existing tag.
 
 Locally, `bash scripts/version.sh` reads the version and `bash scripts/package-release.sh` builds a ZIP with the same signing identity. `bash scripts/setup-release-signing.sh` creates the initial certificate. To verify signing locally, `bash scripts/trust-release-certificate.sh` trusts that certificate for code signing only.
 

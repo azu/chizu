@@ -20,7 +20,7 @@ macOSのアプリ署名とGitHub Actionsの基本的な操作です。
 
 ## 実装方針
 
-版の正本を`VERSION`に置きます。手動起動するワークフローが版を上げたPRを作り、そのPRがmainへ取り込まれると、対応するタグを作成してリリースを開始します。既存タグを指定して再実行する経路も用意します。タグ、`VERSION`、アプリ内の版を同じ値にします。
+版の正本を`VERSION`に置きます。手動起動するワークフローが版を上げたPRを作り、そのPRがmainへ取り込まれると、対応するタグを作成してリリースを開始します。初回リリースでは、管理者がmainの対応するタグを直接pushできます。既存タグを指定して再実行する経路も用意します。タグ、`VERSION`、アプリ内の版を同じ値にします。
 
 配布用アプリはApple SiliconのmacOS上で作ります。固定した証明書の公開指紋をリポジトリに置き、秘密鍵とパスワードをCIのSecretsから渡します。証明書の指紋が異なると署名せずに失敗します。署名済みアプリをZIPにし、展開後にも署名と版を検査してからSHA-256を計算します。[GitHubのランナー一覧](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)で`macos-26`がApple Siliconと確認できます。
 
@@ -50,7 +50,7 @@ sequenceDiagram
 
 ## API・インターフェース
 
-管理者はGitHub Actionsの「Create Release PR」を起動し、`patch`、`minor`、`major`を選びます。PRのマージでリリースが始まります。失敗時は既存タグを指定した「Release」の手動再実行を使えます。
+管理者はGitHub Actionsの「Create Release PR」を起動し、`patch`、`minor`、`major`を選びます。PRのマージでリリースが始まります。初回は対応するタグをpushして「Release」を直接起動できます。失敗時は既存タグを指定した「Release」の手動再実行を使えます。
 
 ローカルでは`bash scripts/version.sh`で版を確認し、`bash scripts/package-release.sh`で同じ署名のZIPを作ります。証明書の初回準備には`bash scripts/setup-release-signing.sh`を使います。ローカルの署名検証には`bash scripts/trust-release-certificate.sh`で証明書をコード署名用途だけに信頼登録します。
 

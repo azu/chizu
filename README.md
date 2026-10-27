@@ -2,15 +2,21 @@
 
 Chizu is a small macOS default browser that sends links to a configured browser and, for Dia or Google Chrome, a named profile. It reads rules from a JSONC file on every link. There is no browser picker or settings window.
 
-## Build and install
+## Install
 
-Requires macOS 14 or later and Xcode Command Line Tools. Run:
+Requires an Apple Silicon Mac with macOS 14 or later. The release download does not require Xcode or a signing certificate. Quit any running copy of Chizu, then run:
 
 ```sh
-scripts/install-app.sh
+curl -fL https://github.com/azu/chizu/releases/latest/download/chizu-macos-arm64.zip -o "$TMPDIR/chizu-macos-arm64.zip" &&
+curl -fL https://github.com/azu/chizu/releases/latest/download/chizu-macos-arm64.zip.sha256 -o "$TMPDIR/chizu-macos-arm64.zip.sha256" &&
+(cd "$TMPDIR" && shasum -a 256 -c chizu-macos-arm64.zip.sha256) &&
+mkdir -p "$HOME/Applications" &&
+ditto -x -k "$TMPDIR/chizu-macos-arm64.zip" "$HOME/Applications" &&
+xattr -dr com.apple.quarantine "$HOME/Applications/Chizu.app" &&
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$HOME/Applications/Chizu.app"
 ```
 
-The script installs `~/Applications/Chizu.app`. It signs the app ad hoc by default. For a stable local signature, set `CHIZU_SIGNING_IDENTITY` to a code signing identity before running the script. A stable signature helps macOS retain the Automation permission used for Dia.
+The commands check the ZIP against its published SHA-256 checksum and install `~/Applications/Chizu.app`. The app uses a fixed self-signed certificate and is not notarized. The `xattr` command removes the downloaded app's quarantine attribute so macOS can open it. Installing over a locally signed copy may require you to allow Chizu to control Dia again.
 
 Create `~/.config/chizu/config.jsonc` from [the example](examples/config.jsonc), then edit the destination app IDs and profile names. This is an ordinary file and can be a symbolic link into a dotfiles repository. Keep personal rules out of the public Chizu repository.
 
@@ -55,6 +61,14 @@ The path can be overridden for CLI checks with `--config FILE`. A missing or inv
 
 ## Development
 
+To build and install from source instead, use macOS 14 or later with Xcode Command Line Tools:
+
+```sh
+scripts/install-app.sh
+```
+
+This script installs `~/Applications/Chizu.app` and signs it ad hoc by default. For a stable local signature, set `CHIZU_SIGNING_IDENTITY` to a code signing identity before running the script.
+
 ```sh
 swift test
 ./bin/sdev lint
@@ -64,7 +78,7 @@ The [specifications](docs/README.md) explain the behavior and implementation. Ch
 
 ## Releases
 
-`VERSION` is the release version. The **Create Release PR** workflow bumps it and opens a PR. Merging that PR creates the matching `v` tag, runs Swift tests, signs the Apple Silicon app, and publishes `chizu-macos-arm64.zip` with a SHA-256 file. An existing tag can be retried with the **Release** workflow. The release PR body becomes the release notes.
+`VERSION` is the release version. The **Create Release PR** workflow bumps it and opens a PR. Merging that PR creates the matching `v` tag, runs Swift tests, signs the Apple Silicon app, and publishes `chizu-macos-arm64.zip` with a SHA-256 file. For the first release, the matching tag can be pushed directly after committing `VERSION`. An existing tag can be retried with the **Release** workflow. The release PR body becomes the release notes; a release without a matching PR uses GitHub's generated notes.
 
 The release certificate is fixed across versions so macOS can recognize the same signing identity. To initialize it once on the release author's Mac, run:
 
