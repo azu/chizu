@@ -69,7 +69,7 @@ Chizu reads the configuration file for each link and keeps it only in the proces
 
 ## Authentication and authorization
 
-There is no account authentication. The user grants macOS Automation permission for Dia control; Chizu does not bypass it.
+There is no account authentication. The user grants macOS Automation permission for Dia control; Chizu does not bypass it. Reading Chrome's `Local State` for a Chrome profile route requires macOS permission to access another app's data, shown under Files and Folders in System Settings. Without it, Chizu reports that it could not read Chrome profiles and does not open the link. macOS records both permissions for the app's code signature, so a build signed differently must be allowed again.
 
 ## Security considerations
 
