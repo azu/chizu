@@ -69,7 +69,7 @@ My routing preferences:
 
 Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for the full command and config reference.
 
-The first Dia route may cause macOS to ask for Automation permission. Allow Chizu to control Dia. If the permission is refused or the named profile does not exist, Chizu reports an error instead of opening the link in a different profile. You can test one URL without changing the default browser:
+The first Dia route may cause macOS to ask for Automation permission. Allow Chizu to control Dia. If the permission is refused or the named profile does not exist, Chizu reports an error instead of opening the link in a different profile. A Chrome profile route reads Chrome's `Local State` file, which macOS treats as another app's data. If Chizu reports `Could not read Chrome profiles from Local State`, open System Settings > Privacy & Security > Files and Folders and allow Chizu to access Google Chrome. You can test one URL without changing the default browser:
 
 ```sh
 ~/Applications/Chizu.app/Contents/MacOS/chizu open 'https://team.example.com/projects/123'
@@ -158,7 +158,7 @@ bash scripts/trust-release-certificate.sh
 
 Commit only the generated `config/release-signing.json`. Back up the ignored `.release-signing/` directory securely. Before using the workflows, register `CODE_SIGN_P12_BASE64` from `base64 < .release-signing/code-signing.p12` and `CODE_SIGN_P12_PASSWORD` from `.release-signing/p12-password` as GitHub Actions secrets. Do not paste either value into an issue, PR, or log. Locally, `bash scripts/package-release.sh` creates the same ZIP and checksum after the certificate is trusted.
 
-The ZIP is signed with the fixed Chizu release certificate. The current pipeline does not notarize the app or provide in-app updates. Installing it over a build signed with another certificate may require macOS Automation permission for Dia to be granted again.
+The ZIP is signed with the fixed Chizu release certificate. The current pipeline does not notarize the app or provide in-app updates. Installing it over a build signed with another certificate may require macOS Automation permission for Dia, and access to Google Chrome's data, to be granted again. If the Chrome entry in Files and Folders turns off again on the next link, it still belongs to the old build. Run `tccutil reset SystemPolicyAppDataDetailed dev.azu.chizu` to remove it. The next Chrome route is denied once and macOS shows a notification; allow Chizu from that notification or from Files and Folders.
 
 ## License
 
