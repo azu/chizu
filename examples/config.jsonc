@@ -17,6 +17,12 @@
       "destination": { "bundleID": "company.thebrowser.dia", "profile": "Team" }
     },
     {
+      "name": "Reading in Firefox",
+      "when": { "host": "reading.example.com" },
+      // Use the name shown in Firefox about:profiles.
+      "destination": { "bundleID": "org.mozilla.firefox", "profile": "Reading" }
+    },
+    {
       "name": "Calendar links from Mail",
       // This rule needs macOS to identify Mail as the sending app.
       "when": { "urlContains": "calendar", "sourceBundleID": "com.apple.mail" },

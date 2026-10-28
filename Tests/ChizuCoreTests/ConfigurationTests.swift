@@ -78,12 +78,65 @@ import Testing
     #expect(throws: ChizuError.self) { try profileInSafari.validate() }
     let profileInChrome = Configuration(default: Destination(bundleID: Configuration.chromeBundleID, profile: "Work"), rules: [])
     try profileInChrome.validate()
+    let profileInFirefox = Configuration(default: Destination(bundleID: Configuration.firefoxBundleID, profile: "Reading"), rules: [])
+    try profileInFirefox.validate()
     let emptyRule = Configuration(default: Destination(bundleID: "com.apple.Safari"),
                                   rules: [Rule(name: "empty", when: Match(), destination: Destination(bundleID: "com.apple.Safari"))])
     #expect(throws: ChizuError.self) { try emptyRule.validate() }
     #expect(throws: ChizuError.self) {
         try Configuration(default: Destination(bundleID: "com.apple.Safari"), rules: [])
             .decide(#require(URL(string: "file:///tmp/test")))
+    }
+}
+
+@Test func resolvesFirefoxProfileByAboutProfilesNameWithoutFallback() throws {
+    let firefoxDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let defaultDirectory = firefoxDirectory.appendingPathComponent("Profiles/abcd.default-release")
+    let namedDirectory = firefoxDirectory.appendingPathComponent("Profiles/efgh.reading")
+    try FileManager.default.createDirectory(at: defaultDirectory, withIntermediateDirectories: true)
+    try FileManager.default.createDirectory(at: namedDirectory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: firefoxDirectory) }
+    let profilesINI = firefoxDirectory.appendingPathComponent("profiles.ini")
+    let contents = """
+        [General]
+        StartWithLastProfile=1
+
+        [Profile0]
+        Name=default-release
+        IsRelative=1
+        Path=Profiles/abcd.default-release
+        Default=1
+
+        [Install12345]
+        Default=Profiles/abcd.default-release
+
+        [Profile1]
+        Name=Reading
+        IsRelative=1
+        Path=Profiles/efgh.reading
+        """
+    try Data(contents.utf8).write(to: profilesINI)
+
+    try FirefoxProfileResolver.validate(named: "Reading", firefoxDirectory: firefoxDirectory)
+    #expect(throws: FirefoxProfileError.profileNotFound("READING")) {
+        try FirefoxProfileResolver.validate(named: "READING", firefoxDirectory: firefoxDirectory)
+    }
+
+    try Data((contents + "\n[Profile2]\nName=Reading\nIsRelative=1\nPath=Profiles/abcd.default-release\n").utf8)
+        .write(to: profilesINI)
+    #expect(throws: FirefoxProfileError.ambiguousProfile("Reading")) {
+        try FirefoxProfileResolver.validate(named: "Reading", firefoxDirectory: firefoxDirectory)
+    }
+
+    try Data(contents.utf8).write(to: profilesINI)
+    try FileManager.default.removeItem(at: namedDirectory)
+    #expect(throws: FirefoxProfileError.profileDirectoryMissing("Reading")) {
+        try FirefoxProfileResolver.validate(named: "Reading", firefoxDirectory: firefoxDirectory)
+    }
+
+    try Data("invalid".utf8).write(to: profilesINI)
+    #expect(throws: FirefoxProfileError.unreadableProfiles) {
+        try FirefoxProfileResolver.validate(named: "Reading", firefoxDirectory: firefoxDirectory)
     }
 }
 

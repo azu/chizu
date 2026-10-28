@@ -124,6 +124,7 @@ public struct RoutingDecision: Equatable, Sendable {
 public struct Configuration: Codable, Equatable, Sendable {
     public static let diaBundleID = "company.thebrowser.dia"
     public static let chromeBundleID = "com.google.Chrome"
+    public static let firefoxBundleID = "org.mozilla.firefox"
 
     public let version: Int
     public let `default`: Destination
@@ -212,9 +213,9 @@ public struct Configuration: Codable, Equatable, Sendable {
             throw ChizuError.invalidConfiguration("invalid app bundleID in '\(name)'")
         }
         if let profile = destination.profile {
-            guard [Self.diaBundleID, Self.chromeBundleID].contains(destination.bundleID),
+            guard [Self.diaBundleID, Self.chromeBundleID, Self.firefoxBundleID].contains(destination.bundleID),
                   !profile.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                throw ChizuError.invalidConfiguration("profile in '\(name)' requires Dia or Chrome and a non-empty name")
+                throw ChizuError.invalidConfiguration("profile in '\(name)' requires Dia, Chrome, or Firefox and a non-empty name")
             }
         }
     }
