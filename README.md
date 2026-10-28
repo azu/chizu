@@ -13,7 +13,8 @@ curl -fL https://github.com/azu/chizu/releases/latest/download/chizu-macos-arm64
 mkdir -p "$HOME/Applications" &&
 ditto -x -k "$TMPDIR/chizu-macos-arm64.zip" "$HOME/Applications" &&
 xattr -dr com.apple.quarantine "$HOME/Applications/Chizu.app" &&
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$HOME/Applications/Chizu.app"
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$HOME/Applications/Chizu.app" &&
+"$HOME/Applications/Chizu.app/Contents/MacOS/chizu" default set
 ```
 
 The commands check the ZIP against its published SHA-256 checksum and install `~/Applications/Chizu.app`. The app uses a fixed self-signed certificate and is not notarized. The `xattr` command removes the downloaded app's quarantine attribute so macOS can open it. Installing over a locally signed copy may require you to allow Chizu to control Dia again.
