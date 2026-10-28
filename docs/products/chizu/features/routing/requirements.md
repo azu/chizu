@@ -8,11 +8,11 @@ This feature chooses where to open a web link received by [Chizu](../../product.
 
 ### Scope
 
-It covers HTTP and HTTPS links and links handed off from a browser with the `chizu-http` and `chizu-https` schemes; conditions on full URL text, regular expressions, host, path, and an identified source app; browser and Dia or Chrome profile destinations; creating and editing file based configuration; previewing the routing result; and inspecting or setting the macOS default browser.
+It covers HTTP and HTTPS links and links handed off from a browser with the `chizu-http` and `chizu-https` schemes; conditions on full URL text, regular expressions, host, path, and an identified source app; browser and Dia, Chrome, or Firefox `about:profiles` profile destinations; creating and editing file based configuration; previewing the routing result; and inspecting or setting the macOS default browser.
 
 ### Out of scope
 
-It does not cover a browser selection screen, detecting or intercepting links opened directly inside a browser, Choosy specific APIs, or migration of invalid Choosy rules.
+It does not cover a browser selection screen, Firefox profiles created through its newer Profiles menu, detecting or intercepting links opened directly inside a browser, Choosy specific APIs, or migration of invalid Choosy rules.
 
 ## User stories
 
@@ -39,6 +39,12 @@ Scenario: Open a link in a specified Chrome profile
 - Given: The configuration names a Chrome profile as shown in Chrome, and exactly one profile has that name.
 - When: A matching link is opened through Chizu.
 - Then: The link opens in that Chrome profile.
+
+Scenario: Open a link in a specified Firefox profile
+
+- Given: The configuration names an existing profile exactly as shown in Firefox `about:profiles`.
+- When: A matching link is opened through Chizu.
+- Then: The link opens in that Firefox profile, including when another Firefox profile is already running.
 
 Scenario: Open a link matching a regular expression in the specified browser
 
@@ -142,6 +148,12 @@ Scenario: Do not use another Chrome profile when the specified one cannot be ide
 - When: A matching link is opened.
 - Then: Chizu does not send the link to Chrome and reports the name and reason it cannot identify the profile.
 
+Scenario: Do not use another Firefox profile when the specified one cannot be identified
+
+- Given: The configured Firefox profile name is missing or duplicated, its directory is missing, or Firefox's profile list cannot be read.
+- When: A matching link is opened through Chizu.
+- Then: Chizu does not send the link to Firefox and reports the reason.
+
 ### Hand off a link from inside a browser
 
 As a user, I want a userscript or extension in one browser to pass a link to Chizu so that a link clicked inside a browser also reaches the destination configured for it.
@@ -207,7 +219,7 @@ Text containment in the full URL ignores letter case. A URL regular expression a
 
 ##### Destination cannot be found
 
-When the configured browser or profile does not exist, Chizu reports an error instead of silently changing the destination. Chrome profiles are specified by the name shown in Chrome; duplicate names also cause an error.
+When the configured browser or profile does not exist, Chizu reports an error instead of silently changing the destination. Chrome profiles use the name shown in Chrome; Firefox profiles use the name shown in `about:profiles`. Missing or duplicate names cause an error.
 
 ## Data requirements
 

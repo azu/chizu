@@ -49,6 +49,8 @@ enum RouteService {
                 try openInDia(url, profile: profile)
             } else if destination.bundleID == Configuration.chromeBundleID {
                 try openInChrome(url, profile: profile)
+            } else if destination.bundleID == Configuration.firefoxBundleID {
+                try openInFirefox(url, profile: profile)
             } else {
                 throw RouteServiceError.commandFailed("Unsupported browser profile: \(destination.bundleID)")
             }
@@ -102,6 +104,35 @@ enum RouteService {
         process.terminationHandler = { process in
             if process.terminationStatus != 0 {
                 NSLog("Chizu: Chrome exited with status %d", process.terminationStatus)
+            }
+        }
+        do {
+            try process.run()
+        } catch {
+            throw RouteServiceError.commandFailed(error.localizedDescription)
+        }
+    }
+
+    private static func openInFirefox(_ url: URL, profile: String) throws {
+        guard let applicationURL = NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: Configuration.firefoxBundleID
+        ) else {
+            throw RouteServiceError.applicationNotFound(Configuration.firefoxBundleID)
+        }
+        let firefoxDirectory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Firefox")
+        try FirefoxProfileResolver.validate(named: profile, firefoxDirectory: firefoxDirectory)
+        guard let executableURL = Bundle(url: applicationURL)?.executableURL else {
+            throw RouteServiceError.applicationExecutableNotFound(Configuration.firefoxBundleID)
+        }
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = ["-P", profile, "--new-tab", url.absoluteString]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        process.terminationHandler = { process in
+            if process.terminationStatus != 0 {
+                NSLog("Chizu: Firefox exited with status %d", process.terminationStatus)
             }
         }
         do {

@@ -28,6 +28,8 @@ Dia profile routing uses the `profile` and `tab` objects exposed by Dia's AppleS
 
 Chrome profile routing reads the association between visible names and profile directories from Chrome's `Local State`. If exactly one name matches and its directory exists, Chizu passes that directory with `--profile-directory` and the URL as separate arguments to Chrome's executable. [Chromium's command line switch](https://chromium.googlesource.com/chromium/src/+/lkgr/chrome/common/chrome_switches.h) treats the value as a profile directory. Chizu does not open the link if the name is missing or duplicated, the state cannot be read, or the directory is missing. It invokes Chrome's executable separately from ordinary URL opening so the argument also reaches an already running Chrome instance. The public app contains no personal profile names.
 
+Firefox profile routing reads the exact names and directories of traditional `about:profiles` entries from `~/Library/Application Support/Firefox/profiles.ini`. It checks that the name occurs once and its directory exists before passing `-P`, the name, `--new-tab`, and the URL as separate arguments to Firefox's executable. [Mozilla's profile service documentation](https://firefox-source-docs.mozilla.org/toolkit/profile/index.html) describes `profiles.ini`, and its [command line reference](https://firefox-source-docs.mozilla.org/browser/CommandLineParameters.html) documents these arguments. Chizu does not use `--no-remote`, which would prevent delivery to an already running instance. Firefox's newer Profiles menu uses a separate profile service, so its display names are outside this route's scope.
+
 Chizu also registers the `chizu-http` and `chizu-https` URL schemes so that a userscript or extension in a browser can hand off a link. A browser cannot pass an HTTP or HTTPS link to the default browser itself, but it can open a URL with a scheme registered by another app. On receipt, Chizu removes the `chizu-` prefix once, ignoring letter case, and routes the result as if it had received that HTTP or HTTPS link. The result must still be HTTP or HTTPS, so `chizu-file:` and a repeated prefix such as `chizu-chizu-https:` fail. Which links a browser hands off is decided by the browser side; Chizu only routes what it receives. If a handed-off link's destination is the browser that sent it, Chizu still opens it there, so browser-side rules should not hand off links that the configuration routes back to the same browser.
 
 Chizu uses the sending process of the received Apple Event as a source app condition when that process can be identified. URL conditions and the default destination still work when it cannot. [Hammerspoon's URL event implementation](https://github.com/Hammerspoon/hammerspoon/blob/master/extensions/urlevent/liburlevent.m) also reads the sending process from Apple Events.
@@ -51,7 +53,7 @@ sequenceDiagram
 
 ## Data model and ER diagram
 
-Chizu reads `version`, `default`, and `rules` from JSONC. It accepts `//` and `/* ... */` comments and trailing commas. It removes only comments and trailing commas, preserving characters inside strings, before validating the result as JSON. Each `rule` contains `name`, `when`, and `destination`. A `when` object may combine full URL containment or a regular expression, exact host matching, path prefix matching, and a source app identifier. A `destination` contains a bundle identifier and an optional visible Dia or Chrome profile name. The data is a simple ordered nested structure, so an ER diagram is unnecessary.
+Chizu reads `version`, `default`, and `rules` from JSONC. It accepts `//` and `/* ... */` comments and trailing commas. It removes only comments and trailing commas, preserving characters inside strings, before validating the result as JSON. Each `rule` contains `name`, `when`, and `destination`. A `when` object may combine full URL containment or a regular expression, exact host matching, path prefix matching, and a source app identifier. A `destination` contains a bundle identifier and an optional Dia, Chrome, or traditional Firefox profile name. The data is a simple ordered nested structure, so an ER diagram is unnecessary.
 
 ## APIs and interfaces
 
@@ -59,11 +61,11 @@ The usual configuration path is `~/.config/chizu/config.jsonc`. It may be a symb
 
 `check URL` and `open URL` also accept `chizu-http` and `chizu-https` links and remove the prefix in the same way as the app. `config check` checks configuration, and `check URL` previews a result without opening the link. `check` requires a URL. `--source` supplies a source app identifier for a CLI preview or manual open. `default status` reads the macOS HTTP and HTTPS handlers, while `default set` changes both to Chizu. The JSONC `default` remains the fallback destination for unmatched links, not the macOS handler. The CLI accepts only the command forms shown in `--help`; earlier names are not kept as aliases. The `--help` output lists each command's form and purpose, the JSONC keys and matching order, and copyable examples. It does not read the configuration file. The README includes a complete generic JSONC example and explains the `check URL` output. The app uses the same evaluator when receiving links.
 
-Browsers are selected by bundle identifier. Without a profile, Chizu passes the URL to macOS `open` with the target app specified. For Dia, it passes the profile name and URL as arguments to a fixed AppleScript. For Chrome, it resolves the visible name from saved profile information and passes the selected directory as a launch argument. URLs and names are not interpreted as shell text.
+Browsers are selected by bundle identifier. Without a profile, Chizu passes the URL to macOS `open` with the target app specified. For Dia, it passes the profile name and URL as arguments to a fixed AppleScript. For Chrome, it resolves the visible name from saved profile information and passes the selected directory as a launch argument. For Firefox, it checks the `profiles.ini` entry and passes its name as a launch argument. URLs and names are not interpreted as shell text.
 
 ## External service integration
 
-No network service is required. Dia's AppleScript interface and Chrome's saved profile information are read from the user's Mac. A missing app, missing required permission, or profile that cannot be identified causes an error.
+No network service is required. Dia's AppleScript interface and Chrome's and Firefox's saved profile information are read from the user's Mac. A missing app, missing required permission, or profile that cannot be identified causes an error.
 
 ## Data handling
 
@@ -71,7 +73,7 @@ Chizu reads the configuration file for each link and keeps it only in the proces
 
 ## Authentication and authorization
 
-There is no account authentication. The user grants macOS Automation permission for Dia control; Chizu does not bypass it. Reading Chrome's `Local State` for a Chrome profile route requires macOS permission to access another app's data, shown under Files and Folders in System Settings. Without it, Chizu reports that it could not read Chrome profiles and does not open the link. macOS records both permissions for the app's code signature, so a build signed differently must be allowed again.
+There is no account authentication. The user grants macOS Automation permission for Dia control; Chizu does not bypass it. Reading Chrome's `Local State` or Firefox's `profiles.ini` may require macOS permission to access another app's data, shown under Files and Folders in System Settings. Without access, Chizu reports that it could not read the profiles and does not open the link. macOS records permissions for the app's code signature, so a build signed differently may need to be allowed again.
 
 ## Security considerations
 

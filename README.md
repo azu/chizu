@@ -1,6 +1,6 @@
 # chīzu 🧀
 
-Chizu is a small macOS default browser that sends links to a configured browser and, for Dia or Google Chrome, a named profile. It reads rules from a JSONC file on every link. There is no browser picker or settings window.
+Chizu is a small macOS default browser that sends links to a configured browser and, for Dia, Google Chrome, or Firefox, a named profile. It reads rules from a JSONC file on every link. There is no browser picker or settings window.
 
 ## Install
 
@@ -69,7 +69,11 @@ My routing preferences:
 
 Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for the full command and config reference.
 
-The first Dia route may cause macOS to ask for Automation permission. Allow Chizu to control Dia. If the permission is refused or the named profile does not exist, Chizu reports an error instead of opening the link in a different profile. A Chrome profile route reads Chrome's `Local State` file, which macOS treats as another app's data. If Chizu reports `Could not read Chrome profiles from Local State`, open System Settings > Privacy & Security > Files and Folders and allow Chizu to access Google Chrome. You can test one URL without changing the default browser:
+The first Dia route may cause macOS to ask for Automation permission. Allow Chizu to control Dia. If the permission is refused or the named profile does not exist, Chizu reports an error instead of opening the link in a different profile. A Chrome profile route reads Chrome's `Local State` file, which macOS treats as another app's data. If Chizu reports `Could not read Chrome profiles from Local State`, open System Settings > Privacy & Security > Files and Folders and allow Chizu to access Google Chrome.
+
+A Firefox profile route reads Firefox's `profiles.ini` file. If Chizu reports `Could not read Firefox profiles from profiles.ini`, allow Chizu to access Firefox under System Settings > Privacy & Security > Files and Folders. Firefox profiles here use the names shown in `about:profiles`; names in Firefox's newer Profiles menu use a separate system and are not supported. [Mozilla's profile service documentation](https://firefox-source-docs.mozilla.org/toolkit/profile/index.html) explains the distinction.
+
+You can test one URL without changing the default browser:
 
 ```sh
 ~/Applications/Chizu.app/Contents/MacOS/chizu open 'https://team.example.com/projects/123'
@@ -101,6 +105,12 @@ For example, save this as `~/.config/chizu/config.jsonc` and replace the example
       "destination": { "bundleID": "company.thebrowser.dia", "profile": "Team" }
     },
     {
+      "name": "Reading in Firefox",
+      "when": { "host": "reading.example.com" },
+      // Use the name shown in Firefox about:profiles.
+      "destination": { "bundleID": "org.mozilla.firefox", "profile": "Reading" }
+    },
+    {
       "name": "Calendar links from Mail",
       // This rule needs macOS to identify Mail as the sending app.
       "when": { "urlContains": "calendar", "sourceBundleID": "com.apple.mail" },
@@ -110,7 +120,7 @@ For example, save this as `~/.config/chizu/config.jsonc` and replace the example
 }
 ```
 
-The first rule sends every URL on `docs.example.com` to the Chrome profile named `Work`. The second requires both the exact host and a path starting with `/projects` before selecting Dia's `Team` profile. The third applies only when the URL contains `calendar` and the sending app is Mail. All other links use Safari. A `when` object must contain at least one condition; rules are checked from top to bottom.
+The first rule sends every URL on `docs.example.com` to the Chrome profile named `Work`. The second requires both the exact host and a path starting with `/projects` before selecting Dia's `Team` profile. The third uses the Firefox `about:profiles` name `Reading`. The fourth applies only when the URL contains `calendar` and the sending app is Mail. All other links use Safari. A `when` object must contain at least one condition; rules are checked from top to bottom.
 
 For a `sourceBundleID` rule, preview the route with `check URL --source BUNDLE_ID`. For example, `chizu check 'https://calendar.example.com/' --source com.apple.mail` simulates a link sent by Mail. Without `--source`, no sending app is assumed during a CLI check.
 
@@ -122,7 +132,20 @@ For a `sourceBundleID` rule, preview the route with `check URL --source BUNDLE_I
 | `pathPrefix` | Start of the path, respecting letter case |
 | `sourceBundleID` | Bundle ID of the sending app, when macOS provides one |
 
-A destination needs `bundleID`. A `profile` can be added for Dia (`company.thebrowser.dia`) or Google Chrome (`com.google.Chrome`). Use the profile name shown in the browser, with matching letter case. For Chrome, Chizu finds that name in Chrome's local profile list and passes its directory to Chrome; a missing or duplicate name fails instead of choosing another profile. The source app may be unavailable for some links; those rules then do not match. Direct links opened inside a browser do not normally pass through the macOS default browser; see [Hand off links from a browser](#hand-off-links-from-a-browser). Chizu reads the file again for each new link, so editing does not require a restart.
+A destination needs the browser's `bundleID`. These macOS examples can be copied into the `default` or a rule's `destination` above:
+
+| Browser | `bundleID` | Chizu `profile` support |
+| --- | --- | --- |
+| Safari | `com.apple.Safari` | — |
+| Google Chrome | `com.google.Chrome` | Yes |
+| Firefox | `org.mozilla.firefox` | Yes, names from `about:profiles` |
+| Microsoft Edge | `com.microsoft.edgemac` | — |
+| Brave | `com.brave.Browser` | — |
+| Dia | `company.thebrowser.dia` | Yes |
+
+The IDs except Edge were checked in the installed apps' `Contents/Info.plist`; [Microsoft documents Edge's ID](https://learn.microsoft.com/en-us/entra/identity/devices/troubleshoot-mac-sso-extension-plugin). An app's `CFBundleIdentifier` in that file is its bundle ID, as [Apple documents](https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html). Check the installed app when using another edition or browser.
+
+A `profile` can be added for Dia, Google Chrome, or Firefox. Use the exact profile name shown in the browser; for Firefox, use the name in `about:profiles`. For Chrome and Firefox, Chizu checks the local profile list before opening the link; a missing or duplicate name fails instead of choosing another profile. The source app may be unavailable for some links; those rules then do not match. Direct links opened inside a browser do not normally pass through the macOS default browser; see [Hand off links from a browser](#hand-off-links-from-a-browser). Chizu reads the file again for each new link, so editing does not require a restart.
 
 The configuration uses JSONC: `//` and `/* ... */` comments and trailing commas are accepted. Strings and keys still use JSON double quotes. An invalid regular expression fails validation instead of silently skipping a rule. For example, `"urlRegex": "(?i).*\\.pdf"` matches a URL ending in `.pdf`, ignoring letter case; a URL with a query string after `.pdf` does not match. Chizu accepts trailing commas as an extension permitted by the [JSONC specification](https://jsonc.org/).
 

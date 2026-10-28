@@ -143,7 +143,8 @@ struct ChizuMain {
               urlContains, urlRegex, host, pathPrefix, and sourceBundleID.
               All fields in one when must match; the first matching rule wins.
               urlRegex is an ICU expression matching the whole URL. If no rule
-              matches, default is used. profile is a visible Dia or Chrome name.
+              matches, default is used. profile is a visible Dia or Chrome name,
+              or the name shown in Firefox about:profiles.
               JSONC permits // and /* */ comments and trailing commas.
 
             Examples:
