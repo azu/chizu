@@ -16,7 +16,7 @@ macOS URL handlers and browser bundle identifiers.
 
 ### Not covered here
 
-The content of personal rules and links opened directly inside a browser.
+The content of personal rules, and how a browser detects which of its links to hand off to Chizu.
 
 ## Implementation approach
 
@@ -27,6 +27,8 @@ The regular expression condition uses macOS `NSRegularExpression`. [Apple's docu
 Dia profile routing uses the `profile` and `tab` objects exposed by Dia's AppleScript interface. Chizu creates a tab in the named profile, retrieves it again by ID, calls `focus` to select it, and then calls `activate` to bring Dia forward. Creating the tab alone could leave the previous tab visible, so Chizu also checks that the newly created tab is active. Personal profile names stay out of the public app. macOS Automation permission is required to control Dia.
 
 Chrome profile routing reads the association between visible names and profile directories from Chrome's `Local State`. If exactly one name matches and its directory exists, Chizu passes that directory with `--profile-directory` and the URL as separate arguments to Chrome's executable. [Chromium's command line switch](https://chromium.googlesource.com/chromium/src/+/lkgr/chrome/common/chrome_switches.h) treats the value as a profile directory. Chizu does not open the link if the name is missing or duplicated, the state cannot be read, or the directory is missing. It invokes Chrome's executable separately from ordinary URL opening so the argument also reaches an already running Chrome instance. The public app contains no personal profile names.
+
+Chizu also registers the `chizu-http` and `chizu-https` URL schemes so that a userscript or extension in a browser can hand off a link. A browser cannot pass an HTTP or HTTPS link to the default browser itself, but it can open a URL with a scheme registered by another app. On receipt, Chizu removes the `chizu-` prefix once, ignoring letter case, and routes the result as if it had received that HTTP or HTTPS link. The result must still be HTTP or HTTPS, so `chizu-file:` and a repeated prefix such as `chizu-chizu-https:` fail. Which links a browser hands off is decided by the browser side; Chizu only routes what it receives. If a handed-off link's destination is the browser that sent it, Chizu still opens it there, so browser-side rules should not hand off links that the configuration routes back to the same browser.
 
 Chizu uses the sending process of the received Apple Event as a source app condition when that process can be identified. URL conditions and the default destination still work when it cannot. [Hammerspoon's URL event implementation](https://github.com/Hammerspoon/hammerspoon/blob/master/extensions/urlevent/liburlevent.m) also reads the sending process from Apple Events.
 
@@ -55,7 +57,7 @@ Chizu reads `version`, `default`, and `rules` from JSONC. It accepts `//` and `/
 
 The usual configuration path is `~/.config/chizu/config.jsonc`. It may be a symbolic link to a Git managed file. `config init` creates a built-in minimal JSONC file with Safari as the fallback and an empty rule list, without a network request. It creates parent directories and opens the destination exclusively with owner-only file permissions, so an existing file or symbolic link is never replaced. `--config FILE` selects another path for initialization, checking, or previewing.
 
-`config check` checks configuration, and `check URL` previews a result without opening the link. `check` requires a URL. `--source` supplies a source app identifier for a CLI preview or manual open. `default status` reads the macOS HTTP and HTTPS handlers, while `default set` changes both to Chizu. The JSONC `default` remains the fallback destination for unmatched links, not the macOS handler. The CLI accepts only the command forms shown in `--help`; earlier names are not kept as aliases. The `--help` output lists each command's form and purpose, the JSONC keys and matching order, and copyable examples. It does not read the configuration file. The README includes a complete generic JSONC example and explains the `check URL` output. The app uses the same evaluator when receiving links.
+`check URL` and `open URL` also accept `chizu-http` and `chizu-https` links and remove the prefix in the same way as the app. `config check` checks configuration, and `check URL` previews a result without opening the link. `check` requires a URL. `--source` supplies a source app identifier for a CLI preview or manual open. `default status` reads the macOS HTTP and HTTPS handlers, while `default set` changes both to Chizu. The JSONC `default` remains the fallback destination for unmatched links, not the macOS handler. The CLI accepts only the command forms shown in `--help`; earlier names are not kept as aliases. The `--help` output lists each command's form and purpose, the JSONC keys and matching order, and copyable examples. It does not read the configuration file. The README includes a complete generic JSONC example and explains the `check URL` output. The app uses the same evaluator when receiving links.
 
 Browsers are selected by bundle identifier. Without a profile, Chizu passes the URL to macOS `open` with the target app specified. For Dia, it passes the profile name and URL as arguments to a fixed AppleScript. For Chrome, it resolves the visible name from saved profile information and passes the selected directory as a launch argument. URLs and names are not interpreted as shell text.
 
@@ -73,7 +75,7 @@ There is no account authentication. The user grants macOS Automation permission 
 
 ## Security considerations
 
-Chizu accepts only HTTP and HTTPS URLs and validates required configuration fields and destinations. It passes URLs and profile names as separate process arguments, not shell commands.
+Chizu accepts only HTTP and HTTPS URLs, after removing the `chizu-` prefix from a handed-off link, and validates required configuration fields and destinations. It passes URLs and profile names as separate process arguments, not shell commands.
 
 ## Deployment notes
 
@@ -84,6 +86,10 @@ After installing Chizu, the user sets it as the macOS default browser. The exist
 ### Switching Dia profiles with a keyboard shortcut
 
 [Dia Router](https://github.com/jdsimcoe/dia-router) switches profiles with keyboard shortcuts before opening a URL. That depends on shortcut settings, Accessibility permission, and the timing of the switch. Chizu uses Dia's AppleScript interface instead.
+
+### Passing the URL as a query parameter
+
+A form such as `chizu://open?url=...` requires percent-encoding the whole URL. Chrome's [`declarativeNetRequest`](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest) can build a redirect only by regular expression substitution and cannot encode the captured URL, so an unencoded `&` or `#` in the original link would break the parameter. Replacing only the scheme needs no encoding and keeps the original URL readable after the prefix.
 
 ## Open questions
 
