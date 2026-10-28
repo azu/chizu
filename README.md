@@ -158,7 +158,7 @@ bash scripts/trust-release-certificate.sh
 
 Commit only the generated `config/release-signing.json`. Back up the ignored `.release-signing/` directory securely. Before using the workflows, register `CODE_SIGN_P12_BASE64` from `base64 < .release-signing/code-signing.p12` and `CODE_SIGN_P12_PASSWORD` from `.release-signing/p12-password` as GitHub Actions secrets. Do not paste either value into an issue, PR, or log. Locally, `bash scripts/package-release.sh` creates the same ZIP and checksum after the certificate is trusted.
 
-The ZIP is signed with the fixed Chizu release certificate. The current pipeline does not notarize the app or provide in-app updates. Installing it over a build signed with another certificate may require macOS Automation permission for Dia, and access to Google Chrome's data, to be granted again. If the old Chrome entry stays in Files and Folders but no longer applies, `tccutil reset SystemPolicyAppData dev.azu.chizu` removes it so macOS can ask again.
+The ZIP is signed with the fixed Chizu release certificate. The current pipeline does not notarize the app or provide in-app updates. Installing it over a build signed with another certificate may require macOS Automation permission for Dia, and access to Google Chrome's data, to be granted again. If the Chrome entry in Files and Folders turns off again on the next link, it still belongs to the old build. Run `tccutil reset SystemPolicyAppDataDetailed dev.azu.chizu` to remove it. The next Chrome route is denied once and macOS shows a notification; allow Chizu from that notification or from Files and Folders.
 
 ## License
 
