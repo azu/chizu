@@ -122,11 +122,21 @@ For a `sourceBundleID` rule, preview the route with `check URL --source BUNDLE_I
 | `pathPrefix` | Start of the path, respecting letter case |
 | `sourceBundleID` | Bundle ID of the sending app, when macOS provides one |
 
-A destination needs `bundleID`. A `profile` can be added for Dia (`company.thebrowser.dia`) or Google Chrome (`com.google.Chrome`). Use the profile name shown in the browser, with matching letter case. For Chrome, Chizu finds that name in Chrome's local profile list and passes its directory to Chrome; a missing or duplicate name fails instead of choosing another profile. The source app may be unavailable for some links; those rules then do not match. Direct links opened inside a browser do not normally pass through the macOS default browser. Chizu reads the file again for each new link, so editing does not require a restart.
+A destination needs `bundleID`. A `profile` can be added for Dia (`company.thebrowser.dia`) or Google Chrome (`com.google.Chrome`). Use the profile name shown in the browser, with matching letter case. For Chrome, Chizu finds that name in Chrome's local profile list and passes its directory to Chrome; a missing or duplicate name fails instead of choosing another profile. The source app may be unavailable for some links; those rules then do not match. Direct links opened inside a browser do not normally pass through the macOS default browser; see [Hand off links from a browser](#hand-off-links-from-a-browser). Chizu reads the file again for each new link, so editing does not require a restart.
 
 The configuration uses JSONC: `//` and `/* ... */` comments and trailing commas are accepted. Strings and keys still use JSON double quotes. An invalid regular expression fails validation instead of silently skipping a rule. For example, `"urlRegex": "(?i).*\\.pdf"` matches a URL ending in `.pdf`, ignoring letter case; a URL with a query string after `.pdf` does not match. Chizu accepts trailing commas as an extension permitted by the [JSONC specification](https://jsonc.org/).
 
 The path can be overridden for CLI checks with `--config FILE`. A missing or invalid config, missing browser, or missing profile is reported as an error. Chizu never silently falls back to another browser or profile.
+
+### Hand off links from a browser
+
+A browser opens its own links without asking macOS, so Chizu cannot see them. A userscript or browser extension can hand a link to Chizu by replacing `http:` or `https:` with `chizu-http:` or `chizu-https:`. Chizu removes the `chizu-` prefix once and routes the link with the same rules:
+
+```sh
+~/Applications/Chizu.app/Contents/MacOS/chizu check 'chizu-https://team.example.com/projects/123'
+```
+
+Only replace the scheme; the rest of the URL is not encoded. Chizu does not decide which links a browser hands off. If a handed-off link is routed back to the browser that sent it, Chizu opens it there, so hand off only links that your configuration sends elsewhere. The browser may ask for permission before it opens Chizu.
 
 ## Development
 

@@ -185,3 +185,29 @@ import Testing
     try Data("{ /* not closed".utf8).write(to: file)
     #expect(throws: ChizuError.self) { try Configuration.load(from: file) }
 }
+
+@Test func handedOffLinksAreRoutedLikeWebLinks() throws {
+    let configuration = Configuration(
+        default: Destination(bundleID: "com.apple.Safari"),
+        rules: [
+            Rule(name: "team", when: Match(host: "team.example.com", pathPrefix: "/projects"),
+                 destination: Destination(bundleID: Configuration.chromeBundleID, profile: "Work")),
+        ]
+    )
+    let handedOff = try HandoffURL.unwrap(#require(URL(string: "chizu-https://team.example.com/projects/1?a=1&b=2#top")))
+    #expect(handedOff.absoluteString == "https://team.example.com/projects/1?a=1&b=2#top")
+    #expect(try configuration.decide(handedOff).ruleName == "team")
+    let upperCase = try HandoffURL.unwrap(#require(URL(string: "CHIZU-HTTP://example.com/")))
+    #expect(upperCase.absoluteString == "HTTP://example.com/")
+    #expect(try configuration.decide(upperCase).ruleName == nil)
+    let plain = try #require(URL(string: "https://example.com/"))
+    #expect(try HandoffURL.unwrap(plain) == plain)
+}
+
+@Test func handedOffLinksMustStillBeWebLinks() throws {
+    let configuration = Configuration(default: Destination(bundleID: "com.apple.Safari"), rules: [])
+    for value in ["chizu-file:///etc/hosts", "chizu-chizu-https://example.com/", "chizu-https:"] {
+        let url = try HandoffURL.unwrap(#require(URL(string: value)))
+        #expect(throws: ChizuError.self) { try configuration.decide(url) }
+    }
+}

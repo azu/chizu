@@ -8,11 +8,11 @@ This feature chooses where to open a web link received by [Chizu](../../product.
 
 ### Scope
 
-It covers HTTP and HTTPS links; conditions on full URL text, regular expressions, host, path, and an identified source app; browser and Dia or Chrome profile destinations; creating and editing file based configuration; previewing the routing result; and inspecting or setting the macOS default browser.
+It covers HTTP and HTTPS links and links handed off from a browser with the `chizu-http` and `chizu-https` schemes; conditions on full URL text, regular expressions, host, path, and an identified source app; browser and Dia or Chrome profile destinations; creating and editing file based configuration; previewing the routing result; and inspecting or setting the macOS default browser.
 
 ### Out of scope
 
-It does not cover a browser selection screen, interception of links opened directly inside a browser, Choosy specific APIs, or migration of invalid Choosy rules.
+It does not cover a browser selection screen, detecting or intercepting links opened directly inside a browser, Choosy specific APIs, or migration of invalid Choosy rules.
 
 ## User stories
 
@@ -142,6 +142,30 @@ Scenario: Do not use another Chrome profile when the specified one cannot be ide
 - When: A matching link is opened.
 - Then: Chizu does not send the link to Chrome and reports the name and reason it cannot identify the profile.
 
+### Hand off a link from inside a browser
+
+As a user, I want a userscript or extension in one browser to pass a link to Chizu so that a link clicked inside a browser also reaches the destination configured for it.
+
+**Acceptance criteria:**
+
+Scenario: Route a handed-off link with the configured rules
+
+- Given: A rule matches `https://team.example.com/projects/1`.
+- When: A browser opens `chizu-https://team.example.com/projects/1`.
+- Then: Chizu opens `https://team.example.com/projects/1` in the destination of that rule, exactly as it would for the HTTPS link.
+
+Scenario: Preview a handed-off link
+
+- Given: A valid configuration file.
+- When: The user runs `chizu check 'chizu-https://team.example.com/projects/1'`.
+- Then: Chizu prints the same result as for `https://team.example.com/projects/1` without opening a browser.
+
+Scenario: Do not open a handed-off link that is not a web link
+
+- Given: Chizu is installed.
+- When: A link such as `chizu-file:///etc/hosts` or `chizu-chizu-https://example.com/` reaches Chizu.
+- Then: Chizu reports that only HTTP and HTTPS links are supported and does not open a browser.
+
 ### Make Chizu the macOS default browser
 
 As a user, I want to inspect and set the system's HTTP and HTTPS handlers so that links from other apps reach Chizu.
@@ -177,7 +201,7 @@ Scenario: Inspect and set the macOS default browser
 
 ##### URL and app
 
-Text containment in the full URL ignores letter case. A URL regular expression applies only when it matches the full URL and is case sensitive by default. Host matching ignores letter case; path prefix matching respects it. A source app condition matches only when that app can be identified. Chizu does not open URL schemes other than HTTP and HTTPS.
+Text containment in the full URL ignores letter case. A URL regular expression applies only when it matches the full URL and is case sensitive by default. Host matching ignores letter case; path prefix matching respects it. A source app condition matches only when that app can be identified. Chizu does not open URL schemes other than HTTP and HTTPS. A `chizu-http` or `chizu-https` link is treated as the HTTP or HTTPS link left after removing the `chizu-` prefix once.
 
 #### Behavior in exceptional cases
 
@@ -206,7 +230,7 @@ None. The user provides the browsers that receive links.
 
 ## Security considerations
 
-Chizu must not rewrite a received URL or send it to a destination other than the one configured. It reports configuration errors and missing permissions to the user.
+Chizu must not rewrite a received URL, other than removing the `chizu-` prefix from a handed-off link, or send it to a destination other than the one configured. It reports configuration errors and missing permissions to the user.
 
 ## Open questions
 

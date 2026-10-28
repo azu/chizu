@@ -38,6 +38,7 @@ final class ChizuAppDelegate: NSObject, NSApplicationDelegate {
 
     private func route(_ url: URL, sourceBundleID: String?) {
         do {
+            let url = try HandoffURL.unwrap(url)
             let decision = try RouteService.decide(url, sourceBundleID: sourceBundleID)
             try RouteService.open(url, decision: decision)
         } catch {
@@ -95,6 +96,8 @@ struct ChizuMain {
         if arguments == ["--help"] || arguments == ["help"] {
             print("""
             chizu routes HTTP and HTTPS links using a JSONC configuration file.
+            A browser can hand off a link by replacing http: or https: with
+            chizu-http: or chizu-https:; check URL and open URL accept these too.
 
             Usage:
               chizu --help
@@ -151,6 +154,7 @@ struct ChizuMain {
               chizu check 'https://example.com/' --source com.apple.mail
               chizu check 'https://example.com/' --config ./config.jsonc
               chizu open 'https://docs.example.com/guide'
+              chizu check 'chizu-https://docs.example.com/guide'
               chizu default status
               chizu default set
 
@@ -233,9 +237,10 @@ struct ChizuMain {
             return
         }
 
-        guard let urlString, let url = URL(string: urlString) else {
+        guard let urlString, let receivedURL = URL(string: urlString) else {
             throw ChizuError.invalidConfiguration("a URL is required")
         }
+        let url = try HandoffURL.unwrap(receivedURL)
         let decision = try RouteService.decide(url, sourceBundleID: sourceBundleID, configurationURL: configurationURL)
         if command == "check" {
             print("rule=\(decision.ruleName ?? "default") app=\(decision.destination.bundleID) profile=\(decision.destination.profile ?? "-")")
