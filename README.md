@@ -64,7 +64,7 @@ each rule and the fallback. Show me the results. If the checks pass, run
 ~/Applications/Chizu.app/Contents/MacOS/chizu default set and
 ~/Applications/Chizu.app/Contents/MacOS/chizu default status.
 
-My routing preferences:
+Ask the user about the routing you want to set up.
 ```
 
 Run `~/Applications/Chizu.app/Contents/MacOS/chizu --help` for the full command and config reference.
